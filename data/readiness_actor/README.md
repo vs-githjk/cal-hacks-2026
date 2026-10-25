@@ -12,7 +12,7 @@ Give it your own listing URLs. For each one you get **blocks** (an agent would s
 
 It is public on the Apify Store: [anoopibrampur/seller-agent-readiness-report](https://apify.com/anoopibrampur/seller-agent-readiness-report).
 
-It was built for [Fish Market](https://github.com/vs-githjk/cal-hacks-2026), a market where buyer agents compare seller offers. The title-claim, stock and shipping checks are the ones our own buyer agents run; the structured-data checks were added for sellers.
+It was built for [Fish Market](https://github.com/vs-githjk/fish-market-nothing-fishy), a market where buyer agents compare seller offers. The title-claim, stock and shipping checks are the ones our own buyer agents run; the structured-data checks were added for sellers.
 
 ## Real example (the default input)
 
@@ -96,4 +96,4 @@ curl -X POST "https://api.apify.com/v2/acts/anoopibrampur~seller-agent-readiness
 
 ## Source
 
-The code is open: `data/readiness.py` and `data/readiness_actor/` in [vs-githjk/cal-hacks-2026](https://github.com/vs-githjk/cal-hacks-2026). The rules reuse our seller report (`data/seller_report.py`) and the claim checker's page reader.
+The code is open: `data/readiness.py` and `data/readiness_actor/` in [vs-githjk/fish-market-nothing-fishy](https://github.com/vs-githjk/fish-market-nothing-fishy). The rules reuse our seller report (`data/seller_report.py`) and the claim checker's page reader.

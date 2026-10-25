@@ -293,7 +293,7 @@ test("arrive: focus is the referee and the caption counts the sealed offers open
 test("round focus and captions: Shield, other refusal, veto and ranked each name who is out", () => {
   const [, r1, r2, r3, r4] = projectArenaScene(closedRows()).beats;
   assert.deepEqual(r1!.focus, ["shield", offerKey("b-shield")]);
-  assert.equal(r1!.caption, "Round 1: Bazaar Shield blocks Shield Co.");
+  assert.equal(r1!.caption, "Round 1: Smell Test blocks Shield Co.");
   assert.deepEqual(r2!.focus, ["referee", offerKey("b-floor")]);
   assert.equal(r2!.caption, "Round 2: Floor Co is out, below this seller floor.");
   assert.deepEqual(r3!.focus, ["advocate", offerKey("b-veto")]);
@@ -439,7 +439,7 @@ test("SAMPLES.gpu: a closed GPU round, five sellers, Byte Bros Outlet wins over 
   assert.match(veto.sourceUrl!, /^https:\/\//);
   assert.deepEqual(s.beats.map((x) => x.kind), ["arrive", "gate", "gate", "advocate", "knockout", "crown"]);
   assert.deepEqual(s.beats.map((x) => x.name), ["Offers opened", "Round 1", "Round 2", "Round 3", "Round 4", "Winner"]);
-  assert.equal(s.beats[1]!.caption, "Round 1: Bazaar Shield blocks Silicon Sally's Surplus.");
+  assert.equal(s.beats[1]!.caption, "Round 1: Smell Test blocks Silicon Sally's Surplus.");
   assert.equal(s.beats[2]!.caption, "Round 2: Bay Area PC Shop is out, below this seller floor.");
   assert.equal(s.beats[3]!.caption, "Round 3: the advocate vetoes FlashDeal Frankie, with a cited source.");
   assert.equal(s.beats[4]!.caption, "Round 4: ReNew Refurb is out at $1,247.02, ranked #2. Its open-box offer ranks below new.");

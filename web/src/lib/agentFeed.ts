@@ -33,7 +33,7 @@ export function feedBase(url: string | undefined, pageHost: string): string | nu
 }
 
 export const FEED_ENV = process.env.NEXT_PUBLIC_AGENT_FEED_URL;
-/** The memory panel still reads this operator feed directly; it falls back to the local launcher. */
+/** Default feed address, used only after feedBase/memoryFeed has cleared the page as loopback. Never render or fetch it on a hosted page. */
 export const FEED_URL = FEED_ENV ?? LOCAL_FEED;
 export const ASI_ONE_URL = "https://asi1.ai/";
 export const POLL_MS = 2000;

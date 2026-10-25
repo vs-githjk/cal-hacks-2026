@@ -17,9 +17,19 @@ Then it phones you to approve the bid it recommends: say the spoken code on the 
 
 1. Turns your message into a goal (budget cap, part by date, or build by date).
 2. Skips parts you already own and cites your own words ("you already own it, your note at 21:58").
-3. Runs a sealed round with five seller agents. Sellers never see your cap.
+3. Runs a sealed round with the live seller agents. Sellers never see your cap.
 4. The Quality Advocate checks fit (socket, GPU length, PSU wattage, decided by code), the condition claim against the listing page, price history, CPSC recalls and the seller's record. It can veto the cheapest bid and cites a source for every warning.
 5. You approve; payment uses the Fetch.ai Payment Protocol with a single-use mandate bound to that exact deal.
+
+## Starter prompts
+
+- "I need a new RTX 5070 Ti that fits my mid-tower case with 330 mm GPU clearance and my existing 750 W PSU, for under $1,300, delivered by Friday. New or open-box is fine, but tell me which condition each seller is offering."
+- "Build me a gaming PC with an RTX 5070 Ti, a 750 W PSU and a case, under $1,800 in total by Sunday. I already own an NVMe drive and a CPU cooler, so skip those."
+- "Find a new 850 W PSU under $150 by Monday, make the sellers compete, and show me the Quality Advocate's warnings with sources before I approve anything."
+
+## Keywords
+
+buying agent, computer parts, GPU, RTX 5070 Ti, PC build, sealed-bid auction, compatibility check, price comparison, purchase approval, shopping agent, Fish Market
 
 ## Honest labels
 

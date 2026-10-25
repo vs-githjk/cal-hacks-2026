@@ -4,11 +4,14 @@ import { Providers } from "@/components/Providers";
 import { PwaRegister } from "@/components/PwaRegister";
 import { AppHeader, RunModeFooter } from "@/components/shell";
 import { fontVars } from "./fonts";
+import { BRAND, BRAND_SHORT, DESCRIPTION } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Tech Bazaar",
-  description: "A refereed arena where seller agents bid for a buyer's computer gear.",
-  appleWebApp: { capable: true, title: "Bazaar", statusBarStyle: "default" },
+  title: { default: BRAND, template: `%s · ${BRAND}` },
+  description: DESCRIPTION,
+  applicationName: BRAND,
+  appleWebApp: { capable: true, title: BRAND_SHORT, statusBarStyle: "default" },
+  openGraph: { title: BRAND, description: DESCRIPTION, siteName: BRAND },
   icons: { apple: "/icons/apple-touch-icon.png" },
 };
 

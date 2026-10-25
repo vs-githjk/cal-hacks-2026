@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fish Market brand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components/bundle.css">
+<style>
+  :root { --koi:#ff7a45; --koi-soft:#fff1ea; }
+  body { background: var(--canvas); }
+  .page { max-width: 1120px; margin: 0 auto; padding: 56px 32px 96px; display: grid; gap: 56px; position: relative; }
+  .wash { position: absolute; inset: 0 0 auto 0; height: 640px; pointer-events: none; background: radial-gradient(50% 70% at 12% 0%, var(--live-soft), transparent 70%), radial-gradient(45% 60% at 92% 4%, var(--pulse-soft), transparent 70%); }
+  h2 { font: 500 28px/34px var(--font-sans); letter-spacing: -0.015em; }
+  .sec { display: grid; gap: 20px; position: relative; }
+  .sec > p.lead { font-size: 17px; line-height: 26px; color: var(--ink-2); max-width: 64ch; }
+  .top { display: grid; gap: 24px; position: relative; }
+  .lockup { display: flex; align-items: center; gap: 18px; }
+  .lockup .name { font: 500 64px/68px var(--font-sans); letter-spacing: -0.035em; }
+  .tag { font: 500 28px/34px var(--font-sans); letter-spacing: -0.015em; color: var(--ink-2); max-width: 30ch; }
+  .tag b { color: var(--muted); font-weight: 500; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .sizes { display: flex; align-items: end; gap: 28px; flex-wrap: wrap; }
+  .sizes figure { margin: 0; display: grid; gap: 8px; justify-items: center; }
+  .sizes figcaption { font: 500 11px/14px var(--font-mono); color: var(--muted); letter-spacing: .04em; }
+  .dark { background: var(--ink); color: #eef3f8; border-color: #1f3a55; }
+  .dark .muted { color: #8fa0b2; }
+  .wm { display: inline-flex; align-items: center; gap: 8px; font: 500 16px/20px var(--font-sans); letter-spacing: -0.02em; }
+  .tab { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; background: var(--surface); border: 1px solid var(--line); border-bottom: 0; border-radius: 10px 10px 0 0; font-size: 12.5px; color: var(--ink-2); }
+  .chrome { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 8px 0; }
+  .phone { width: 220px; border-radius: 28px; padding: 18px; background: linear-gradient(160deg, #1e4ed8, #0891b2); display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 10px; box-shadow: var(--shadow-lift); }
+  .phone .app { display: grid; gap: 4px; justify-items: center; font: 500 9.5px/12px var(--font-sans); color: #fff; text-align: center; }
+  .phone .ph { width: 40px; height: 40px; border-radius: 10px; background: #ffffff33; }
+  .sw { display: grid; gap: 8px; }
+  .sw .chip { height: 72px; border-radius: 12px; border: 1px solid var(--line); }
+  .sw b { font: 600 13px/18px var(--font-sans); }
+  .sw span { font: 400 12px/16px var(--font-mono); color: var(--muted); }
+  .swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 24px; }
+  .rule { font-size: 13px; line-height: 18px; color: var(--ink-2); }
+  .st-card { display: grid; gap: 14px; }
+  .st-name { display: flex; align-items: center; gap: 12px; font: 500 32px/36px var(--font-sans); letter-spacing: -0.02em; }
+  .nose { width: 40px; height: 40px; border-radius: 12px; background: var(--live-soft); display: grid; place-items: center; color: var(--live); }
+  .bid { display: grid; grid-template-columns: 8px 1fr auto; gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid var(--line); }
+  .bid:first-child { border-top: 0; }
+  .bid i { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; }
+  .bid .r { font-size: 13px; line-height: 18px; color: var(--muted); }
+  .bid .p { font: 500 15px/20px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--muted); text-decoration: line-through; }
+  /* hero mock */
+  .frame { border-radius: 24px; overflow: hidden; border: 1px solid var(--line); box-shadow: var(--shadow-lift); background: var(--canvas); position: relative; }
+  .frame .nav { z-index: 2; display: flex; align-items: center; justify-content: space-between; height: 60px; padding: 0 28px; border-bottom: 1px solid var(--line); background: var(--glass); position: relative; }
+  .frame .links { display: flex; gap: 4px; font: 500 14px/20px var(--font-sans); color: var(--ink-2); }
+  .frame .links span { padding: 10px 12px; border-radius: 8px; }
+  .frame .links span.on { background: var(--surface-2); color: var(--ink); }
+  .hero { position: relative; padding: 64px 40px 48px; display: grid; gap: 48px; grid-template-columns: 1.05fr .95fr; align-items: center; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font: 500 15px/20px var(--font-sans); color: var(--ink-2); }
+  .eyebrow .dot { color: var(--live); }
+  .hero h1 { font: 500 56px/60px var(--font-sans); letter-spacing: -0.03em; margin: 16px 0; text-wrap: balance; }
+  .hero h1 span { color: var(--muted); }
+  .hero .lead2 { font-size: 17px; line-height: 26px; color: var(--ink-2); max-width: 44ch; }
+  .cta { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
+  .proof { display: flex; gap: 28px; margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .proof div { display: grid; gap: 2px; }
+  .proof b { font: 500 24px/30px var(--font-sans); letter-spacing: -0.015em; font-variant-numeric: tabular-nums; }
+  .mock { padding: 24px; display: grid; gap: 14px; }
+  .mock .n { font: 500 48px/52px var(--font-sans); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .mock .n small { font-size: 15px; letter-spacing: 0; color: var(--muted); font-weight: 400; margin-left: 8px; }
+  .mock .row .dot::after { display: none; }
+  .koi-u { background: linear-gradient(transparent 62%, var(--koi-soft) 62%); }
+  .voice { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .voice ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: 15px; line-height: 22px; color: var(--ink-2); }
+  .foot { font: 400 12px/16px var(--font-mono); color: var(--muted); }
+  @media (max-width: 760px) {
+    .page { padding: 32px 16px 64px; gap: 40px; }
+    .lockup .name { font-size: 40px; line-height: 44px; }
+    .lockup svg { width: 48px; height: 48px; }
+    .tag { font-size: 22px; line-height: 28px; }
+    .grid2, .grid3, .voice { grid-template-columns: 1fr; }
+    .hero { grid-template-columns: 1fr; padding: 32px 16px; gap: 28px; }
+    .hero h1 { font-size: 40px; line-height: 44px; }
+    .frame .links, .frame .nav .pill { display: none; }
+    .swatches { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .chrome .tab + .tab { display: none; }
+    .proof { gap: 16px; }
+    .frame .nav { padding: 0 16px; }
+  }
+</style></head>
+<body>
+<div class="wash"></div>
+<main class="page">
+
+  <section class="top">
+    <span class="pill pill-referee" style="width:max-content">Brand direction · for #430 · design system v2</span>
+    <div class="lockup"><svg width="72" height="72" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#0b1b2b"/><g transform="translate(1.7 1.7) scale(0.86)"><path fill="#eef3f8" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.5" fill="#ff7a45"/></g></svg><span class="name">Fish Market</span></div>
+    <p class="tag">The agentic marketplace where buyers and sellers thrive. <b>Nothing fishy gets through.</b></p>
+    <p class="lead" style="font-size:17px;line-height:26px;color:var(--ink-2);max-width:64ch">A goofy name on a serious product. The name and the security screen carry the wit; everything a buyer reads about money stays plain, calm and exact. The fish is the buyer's agent: its open mouth eats the worst offer each round, the same move as the Pac-Man floor.</p>
+  </section>
+
+  <section class="sec">
+    <h2>The mark</h2>
+    <div class="grid2">
+      <div class="card" style="display:grid;gap:20px">
+        <div class="cap">App tile at real sizes</div>
+        <div class="sizes">
+          <figure><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#0b1b2b"/><g transform="translate(1.7 1.7) scale(0.86)"><path fill="#eef3f8" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.5" fill="#ff7a45"/></g></svg><figcaption>16</figcaption></figure>
+          <figure><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#0b1b2b"/><g transform="translate(1.7 1.7) scale(0.86)"><path fill="#eef3f8" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.5" fill="#ff7a45"/></g></svg><figcaption>22 nav</figcaption></figure>
+          <figure><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#0b1b2b"/><g transform="translate(1.7 1.7) scale(0.86)"><path fill="#eef3f8" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.5" fill="#ff7a45"/></g></svg><figcaption>32</figcaption></figure>
+          <figure><svg width="48" height="48" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#0b1b2b"/><g transform="translate(1.7 1.7) scale(0.86)"><path fill="#eef3f8" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.5" fill="#ff7a45"/></g></svg><figcaption>48</figcaption></figure>
+          <figure><svg width="96" height="96" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#0b1b2b"/><g transform="translate(1.7 1.7) scale(0.86)"><path fill="#eef3f8" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.5" fill="#ff7a45"/></g></svg><figcaption>96</figcaption></figure>
+          <figure><svg width="144" height="144" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#0b1b2b"/><g transform="translate(1.7 1.7) scale(0.86)"><path fill="#eef3f8" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.5" fill="#ff7a45"/></g></svg><figcaption>PWA 512</figcaption></figure>
+        </div>
+        <div class="rule">Solid shapes, no strokes, so it holds at 16 px. Body, forked tail and a Pac-Man wedge for the mouth. The koi eye is the only colour.</div>
+      </div>
+      <div class="card dark" style="display:grid;gap:20px">
+        <div class="cap" style="color:#8fa0b2">Glyph on ink, and on canvas</div>
+        <div class="sizes">
+          <figure><svg width="96" height="96" viewBox="0 0 24 24" aria-hidden="true"><path fill="#eef3f8" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.35" fill="#ff7a45"/></svg><figcaption>glyph</figcaption></figure>
+          <figure><svg width="96" height="96" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#eef3f8"/><g transform="translate(1.7 1.7) scale(0.86)"><path fill="#0b1b2b" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.5" fill="#ff7a45"/></g></svg><figcaption>reversed tile</figcaption></figure>
+          <figure><svg width="96" height="96" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#1e4ed8"/><g transform="translate(1.7 1.7) scale(0.86)"><path fill="#ffffff" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.5" fill="#ff7a45"/></g></svg><figcaption>pulse tile (rare)</figcaption></figure>
+        </div>
+        <div class="rule" style="color:#c5d0dc">Default is the ink tile. The reversed tile is for the dark floor. The pulse tile only for an install prompt.</div>
+      </div>
+    </div>
+    <div class="grid3">
+      <div class="card" style="display:grid;gap:14px">
+        <div class="cap">Favicon</div>
+        <div class="chrome"><span class="tab"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#0b1b2b"/><g transform="translate(1.7 1.7) scale(0.86)"><path fill="#eef3f8" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.5" fill="#ff7a45"/></g></svg>Fish Market</span><span class="tab" style="background:transparent;border-color:transparent;color:var(--muted)"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#5b6b7c" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.35" fill="#ff7a45"/></svg>New tab</span></div>
+      </div>
+      <div class="card" style="display:grid;gap:14px;justify-items:start">
+        <div class="cap">Home screen (PWA)</div>
+        <div class="phone">
+          <div class="app"><span class="ph"></span>Mail</div><div class="app"><svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#0b1b2b"/><g transform="translate(1.7 1.7) scale(0.86)"><path fill="#eef3f8" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.5" fill="#ff7a45"/></g></svg>Fish Market</div><div class="app"><span class="ph"></span>Maps</div><div class="app"><span class="ph"></span>Notes</div>
+        </div>
+      </div>
+      <div class="card" style="display:grid;gap:14px">
+        <div class="cap">Wordmark</div>
+        <div class="wm"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#0b1b2b"/><g transform="translate(1.7 1.7) scale(0.86)"><path fill="#eef3f8" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.5" fill="#ff7a45"/></g></svg>Fish Market</div>
+        <div class="wm" style="background:var(--ink);color:#eef3f8;padding:10px 12px;border-radius:12px;width:max-content"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#eef3f8"/><g transform="translate(1.7 1.7) scale(0.86)"><path fill="#0b1b2b" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.5" fill="#ff7a45"/></g></svg>Fish Market</div>
+        <div class="rule">Geist 500, 16 px, tracking -0.02em, beside the 22 px tile. One string: <span class="mono">BRAND</span> in <span class="mono">web/src/lib/brand.ts</span>.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Colour: v2 plus one accent</h2>
+    <p class="lead">Ink, the pulse blue, live cyan and every semantic pair stay exactly as design system v2 measured them. Fish Market adds one brand accent, koi, used only for the mark's eye and a rare brand moment. It never means a state: red still means eaten, vetoed or blocked, and it always says its word.</p>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#0b1b2b"></div><b>Ink</b><span>#0b1b2b · text, tile</span></div>
+      <div class="sw"><div class="chip" style="background:#eef3f8"></div><b>Canvas</b><span>#eef3f8 · ground</span></div>
+      <div class="sw"><div class="chip" style="background:#1e4ed8"></div><b>Pulse</b><span>#1e4ed8 · the one action</span></div>
+      <div class="sw"><div class="chip" style="background:#0891b2"></div><b>Live</b><span>#0891b2 · heartbeat, Smell Test</span></div>
+      <div class="sw"><div class="chip" style="background:#ff7a45"></div><b>Koi (new)</b><span>#ff7a45 · eye, brand only</span></div>
+      <div class="sw"><div class="chip" style="background:#fff1ea"></div><b>Koi soft (new)</b><span>#fff1ea · highlight</span></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span class="pill pill-live"><span class="dot"></span>Live</span><span class="pill pill-sealed">Sealed</span><span class="pill pill-eaten">Eaten · price</span><span class="pill pill-blocked">Blocked by Smell Test</span><span class="pill pill-approved">Approved by phone</span><span class="pill pill-sim">SIM</span><span class="pill pill-mirror">MIRROR</span><span class="pill pill-referee">Referee</span>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>The Shield is now Smell Test</h2>
+    <div class="grid2">
+      <div class="card st-card">
+        <div class="st-name"><span class="nose"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path fill="#0891b2" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.35" fill="#ff7a45"/></svg></span>Smell Test</div>
+        <p style="font-size:17px;line-height:26px;color:var(--ink-2)">Nothing fishy gets through. Every listing and seller message is screened before the buyer's agent reads it. One that hides instructions or swaps the payee is quarantined with the rules that fired.</p>
+        <div class="well sm ink2">Honest numbers only: <b>13 of 20</b> held-out attacks stopped on this corpus. Never "secure"; say what it stopped and what it missed.</div>
+        <div class="rule">In code and the API it stays <span class="mono">shield</span> (<span class="mono">/v1/shield/screen</span>). Only the name people see changes.</div>
+      </div>
+      <div class="card">
+        <div class="cap" style="margin-bottom:8px">How it reads on a decision</div>
+        <div class="bid"><i style="background:var(--ghost-2)"></i><div>Seller 2 · injected listing <span class="pill pill-blocked" style="height:20px">Failed the Smell Test</span><div class="r">Listing text asked the agent to ignore its rules. Quarantined: shield.override.instruction, shield.payee.swap.</div></div><div class="p">$1,189.00</div></div>
+        <div class="bid"><i style="background:var(--ghost-3)"></i><div>Seller 3 · eBay mirror <span class="pill pill-vetoed" style="height:20px">Vetoed</span><div class="r">Condition unknown, so fit is uncertain; uncertain never beats a confirmed fit.</div></div><div class="p">$1,222.23</div></div>
+        <div class="bid"><i style="background:var(--ghost-4)"></i><div>Best Buy listing <span class="pill pill-verified" style="height:20px">Passed the Smell Test</span><div class="r">Fit confirmed, 304 mm card clears the case. No recall.</div></div><div class="p" style="text-decoration:none;color:var(--ink)">$1,299.99</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Home hero</h2>
+    <div class="frame">
+      <div class="nav"><span class="wm"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#0b1b2b"/><g transform="translate(1.7 1.7) scale(0.86)"><path fill="#eef3f8" d="M21.2 9.3 15.4 12l5.8 2.7A7.3 7.3 0 0 1 8.9 16.6L3 20.2l1.4-8.2L3 3.8l5.9 3.6a7.3 7.3 0 0 1 12.3 1.9Z"/><circle cx="16.3" cy="8.6" r="1.5" fill="#ff7a45"/></g></svg>Fish Market</span><span class="links"><span>Buyer</span><span>Market</span><span>Floor</span><span>Sell</span></span><span style="display:flex;gap:10px;align-items:center"><span class="pill pill-live"><span class="dot"></span>Market live</span><span class="btn btn-primary" style="min-height:40px;padding:0 16px">Start a goal</span></span></div>
+      <div class="wash" style="height:420px"></div>
+      <div class="hero">
+        <div>
+          <span class="eyebrow"><span class="dot"></span>Live sandbox. Sealed rounds, test-mode money.</span>
+          <h1>Sellers compete. <span>Nothing fishy gets through.</span></h1>
+          <p class="lead2">Fish Market is the agentic marketplace where buyers and sellers thrive. Seller agents bid for your PC parts in sealed rounds, Smell Test screens every listing, and nothing above your allowance is paid until you say the code on the phone.</p>
+          <div class="cta"><span class="btn btn-primary">Start a goal</span><span class="btn btn-ghost">Watch the floor</span></div>
+          <div class="proof">
+            <div><b>39 of 39</b><span class="sm muted">fit checks right on maker-checked builds</span></div>
+            <div><b>13 of 20</b><span class="sm muted">held-out attacks stopped by Smell Test</span></div>
+            <div><b>9 of 10</b><span class="sm muted">voice approval attacks denied</span></div>
+          </div>
+        </div>
+        <div class="glass mock">
+          <div class="spread"><span class="cap">Round 3 of 3 · GPU · closed</span><span class="pill pill-approved">Approved by phone</span></div>
+          <div class="n">$1,299.99<small>landed</small></div>
+          <div class="ink2">ASUS Prime RTX 5070 Ti OC · Best Buy <span class="pill pill-mirror" style="height:20px">MIRROR</span></div>
+          <div>
+            <div class="row"><span class="dot" style="color:var(--mint-mark)"></span><span>Fit confirmed, 304 mm card clears the case.</span></div>
+            <div class="row"><span class="dot" style="color:var(--live)"></span><span>Passed the Smell Test. 2 sellers did not.</span></div>
+            <div class="row"><span class="dot" style="color:var(--pulse)"></span><span>Stripe test mode. No real money moved.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Voice</h2>
+    <div class="voice">
+      <div class="card"><div class="cap" style="margin-bottom:10px">Where the wit lives</div><ul><li>The name, the mark and the Smell Test.</li><li>One line per screen at most: "Nothing fishy gets through."</li><li>Empty states may smile: "Quiet waters. No rounds open."</li></ul></div>
+      <div class="card"><div class="cap" style="margin-bottom:10px">Where it never goes</div><ul><li>Prices, codes, receipts, approvals and errors: plain and exact.</li><li>No puns on money, no "catch of the day" on a deal.</li><li>Never call a real store fishy; say the claim did not match its source.</li></ul></div>
+    </div>
+    <p class="foot">Domain: fishmarket.dev · Tagline: The agentic marketplace where buyers and sellers thrive. · Secondary: Nothing fishy gets through. · Labels LIVE, MIRROR and SIM stay on every number.</p>
+  </section>
+</main>
+</body></html>
