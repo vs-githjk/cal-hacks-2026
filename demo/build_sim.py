@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import re
 
+from demo import build
+
 LADDER_TOP = (600, 1500)   # market/config.ts ALLOWANCE_LADDER's top step: per purchase, per period
 # market/config.ts QUALITY (a test reads the file and pins these): the market ranks on the quality-adjusted score, not on landed price
 QUALITY = {"condition_adj": {"new": 0.0, "open-box": 0.04, "refurbished": 0.08, "used": 0.15, "unknown": 0.0}, "no_returns_adj": 0.02,
@@ -41,6 +43,8 @@ class SimMarket:
         self.swallow_approval, self.never_close, self.knockout = False, False, set()
         self.goals = {}
         self.buyer_id = "vidyut"   # whose allowance the buyer client reads back (my_allowance)
+        self.goal_reader = "vidyut"   # the buyer role the buyer client holds: my_goals returns this buyer's goals only
+        self.goal_state = {}          # goal id -> state (default ACTIVE)
 
     def post_goal(self, a):
         # market.ts GOAL_TYPES, which is also the enum of contracts/Goal.schema.json
@@ -266,6 +270,16 @@ class _Client:
             return [(rid, m.rounds[rid]["need_id"], "t", "t", 0, st, 0, None, "SIM") for rid, st in m.round_state.items()]
         if query in ("SELECT * FROM allowance", "SELECT * FROM approval", "SELECT * FROM mandate"):   # private: the referee cannot read them
             raise RuntimeError("sql failed (400): no such table")
+        if query == build.GOALS_SQL:        # the my_goals view answers the caller's own buyer role only: the referee and sellers read none
+            if self.name != "buyer":
+                return []
+            return [(g["id"], g["buyer_id"], g["type"], g["cap"], g["deadline"], m.goal_state.get(g["id"], "ACTIVE"), [1_000_000 * i])
+                    for i, g in enumerate(m.goals.values(), 1) if g["buyer_id"] == m.goal_reader]
+        if query == build.GOAL_ITEMS_SQL:   # my_goal_items: the same rule
+            if self.name != "buyer":
+                return []
+            return [(g["id"], i["sku_spec"], i["condition"], i["variant"], i["quantity"], i["skipped_owned_part_id"])
+                    for g in m.goals.values() if g["buyer_id"] == m.goal_reader for i in g["items"]]
         if query == "SELECT * FROM my_allowance":      # buyer only
             if self.name != "buyer" or not m.allowance_readable:
                 raise RuntimeError("sql failed (400)")
