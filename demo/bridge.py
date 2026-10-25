@@ -521,19 +521,24 @@ def market_has_typed_approval(module: Path = MARKET_MODULE) -> bool:
         return True
 
 
-def default_crs_check(payee: str) -> dict:
-    """#257: agents/crs.py check_payee for the winning payee (one request per payee, cached for its TTL). A payee with no
-    business CRS profile is a SIM seller and makes no request; CRS keys come from the environment and are never printed."""
-    import asyncio
+def crs_module():
+    """agents/crs.py, loaded once as lane_d_crs so every caller shares one login latch and one payee cache."""
     import importlib.util
-    from datetime import datetime, timezone
     mod = sys.modules.get("lane_d_crs")
     if mod is None:
         spec = importlib.util.spec_from_file_location("lane_d_crs", ROOT / "agents" / "crs.py")
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         sys.modules["lane_d_crs"] = mod
-    return asyncio.run(mod.check_payee(payee, datetime.now(timezone.utc)))
+    return mod
+
+
+def default_crs_check(payee: str) -> dict:
+    """#257: agents/crs.py check_payee for the winning payee (one request per payee, cached for its TTL). A payee with no
+    business CRS profile is a SIM seller and makes no request; CRS keys come from the environment and are never printed."""
+    import asyncio
+    from datetime import datetime, timezone
+    return asyncio.run(crs_module().check_payee(payee, datetime.now(timezone.utc)))
 
 
 class GateRefused(RuntimeError):

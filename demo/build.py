@@ -1784,6 +1784,31 @@ def main(argv: Optional[list] = None) -> int:
     return 0 if res["status"] == "paid" else 1
 
 
+def crs_payee_lines(champs: dict, now: datetime) -> list[tuple[str, str]]:
+    """#398: (origin, text) per payee of the champions, from agents/crs.py payee_status (local files only, never the sandbox).
+    The tag is the seller's own origin; the text says its CRS status. A recorded band is never LIVE, and nothing here is a pass."""
+    from demo import bridge
+    crs = bridge.crs_module()
+    payees = {}
+    for c in champs.values():
+        payees.setdefault(c["sellerId"], c)
+    lines = []
+    for sid in sorted(payees):
+        c, s = payees[sid], crs.payee_status(sid, now)
+        who = f"{c['persona']} ({sid}): "
+        if s["state"] == "unknown":
+            text = f"CRS unknown, {s['reason']}; a business payee would hold the payee gate"
+        elif s["state"] == "sim":
+            text = f"no CRS profile: {s['reason']}; identity not checked (the payee gate asks CRS only about a business profile)"
+        elif s["band"] is None:
+            text = f"business CRS profile ({s['persona_ref']}), not checked: a dry run makes no CRS call; a live run checks it at the payee gate"
+        else:
+            text = (f"business CRS profile ({s['persona_ref']}), CRS band {s['band']}, recorded {s['checked_at']}, not checked in this run"
+                    + ("" if s["band"] == "verified_stable" else "; the payee gate would hold"))
+        lines.append((c["origin"], who + text))
+    return lines
+
+
 def _dry_run(args, plan: BuildPlan, allowance: dict, knockout: bool, stagger: Optional[float], out, say, clock_of: dict) -> int:
     """Everything before the call, on demo.build_sim's in-memory market (no market, no network, no call, nothing paid): the goal, a sealed
     round per part on the timeline, the fit checks after each lock, the re-plan, and the BuildView at the end."""
@@ -1811,6 +1836,10 @@ def _dry_run(args, plan: BuildPlan, allowance: dict, knockout: bool, stagger: Op
     for e in v["events"]:
         if e["kind"] in ("plan", "clash", "replan", "knockout") or (e["kind"] == "locked" and e["parts"]):
             out.line(e["origin"], f"{e['kind']:<10}{e['text']}")
+    out.blank()
+    out.note("CRS per payee (#398; the local profile file and recorded results only: a dry run makes no CRS call):")
+    for origin, text in crs_payee_lines(run.champions()[0], datetime.now(timezone.utc)):
+        out.line(origin, text)
     out.blank()
     out.note(f"pacing: the rounds are scheduled over {run.schedule_s:.0f} s ("
              + (f"parts open {stagger:g} s apart, all within {stagger * (len(plan.parts) - 1):g} s, and close in order" if stagger is not None
