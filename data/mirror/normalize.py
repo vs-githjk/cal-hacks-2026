@@ -68,6 +68,20 @@ def attrs_from_title(title):
     return "unknown", {}
 
 
+def store_condition(store, item):
+    """A condition the store's own listing data states as flags, or None. B&H marks every listing with is_used and
+    condition_flags.isRefurbished / isOpenBox; all three present and false is B&H saying the item is new (#397 A3)."""
+    if store == "bh" and isinstance(item, dict) and isinstance(item.get("condition_flags"), dict):
+        flags = item["condition_flags"]
+        marks = (item.get("is_used"), flags.get("isUsed"), flags.get("isRefurbished"), flags.get("isOpenBox"))
+        if any(m is True for m in marks):
+            return "used" if item.get("is_used") is True or flags.get("isUsed") is True else \
+                   "refurbished" if flags.get("isRefurbished") is True else "open-box"
+        if all(m is False for m in marks):
+            return "new"
+    return None
+
+
 def strip_private(store, item):
     if store not in PRIVATE_SELLER_STORES:
         return item
@@ -133,7 +147,7 @@ def to_spec_card(store, item, snapshot_id, snapshot_date, part=None):
     card = {
         "id": f"{store}:{hashlib.sha1(key.encode()).hexdigest()[:12]}", "category": cat, "name": title,
         "model_number": str(f["model_number"]) if f["model_number"] else None,
-        "condition": condition(f["condition"], title) if f["condition"] else "unknown",
+        "condition": condition(f["condition"], title) if f["condition"] else (store_condition(store, item) or "unknown"),
         "attrs": attrs, "price": listing["price"], "currency": "USD", "origin": "MIRROR",
         "source": f["url"] or store, "snapshot_id": snapshot_id, "snapshot_date": snapshot_date,
         "listing": {**{k: v for k, v in listing.items() if v is not None}, **landed(listing, listing["price"])},

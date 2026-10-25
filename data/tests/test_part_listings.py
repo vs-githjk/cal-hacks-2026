@@ -447,3 +447,25 @@ def test_an_amazon_listing_that_names_no_seller_never_bids(tmp_path, specs):
     root = tmp_path / "p"
     write(root, "amazon-cpu-x-20261024T2200Z", [card("amazon", "cpu", "AMD Ryzen 7 9700X", 280.0, "https://amz/none")])
     assert parts.offers("cpu", root=root) == []
+
+
+BH_FLAGS = {"isUsed": False, "isRefurbished": False, "isOpenBox": False, "isBHExclusive": False}
+
+
+@pytest.mark.parametrize("extra,want", [
+    ({"is_used": False, "condition_flags": BH_FLAGS}, "new"),
+    ({"is_used": False, "condition_flags": {**BH_FLAGS, "isOpenBox": True}}, "open-box"),
+    ({"is_used": False, "condition_flags": {**BH_FLAGS, "isRefurbished": True}}, "refurbished"),
+    ({"is_used": True, "condition_flags": BH_FLAGS}, "used"),
+    ({"condition_flags": BH_FLAGS}, "unknown"),                        # is_used missing: the page did not say
+    ({"is_used": False, "condition_flags": {"isUsed": False}}, "unknown"),   # refurbished and open-box flags missing
+    ({}, "unknown")])
+def test_bh_condition_comes_only_from_its_own_flags(extra, want):  # #397 A3: never guessed, never from another store
+    c = normalize.to_spec_card("bh", item("MSI GeForce RTX 5070 Ti", 1189.95, "https://bh/1", **extra), "s", "d")
+    assert c["condition"] == want
+
+
+def test_other_stores_never_read_bh_style_flags():
+    c = normalize.to_spec_card("microcenter", item("MSI GeForce RTX 5070 Ti", 1199.99, "https://mc/1", is_used=False,
+                                                   condition_flags=BH_FLAGS), "s", "d")
+    assert c["condition"] == "unknown"

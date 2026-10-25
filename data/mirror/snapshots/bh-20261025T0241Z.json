@@ -4,7 +4,7 @@
   "category": "gpu",
   "name": "ASUS GeForce RTX 5070 Ti PRIME OC Graphics Card",
   "model_number": "PRIME-RTX5070TI-O16GING",
-  "condition": "unknown",
+  "condition": "new",
   "attrs": {
    "chipset": "RTX 5070 Ti"
   },
@@ -29,7 +29,7 @@
   "category": "gpu",
   "name": "ASUS GeForce RTX 5070 Ti ProArt OC Graphics Card",
   "model_number": "PROART-RTX5070TI-O16G",
-  "condition": "unknown",
+  "condition": "new",
   "attrs": {
    "chipset": "RTX 5070 Ti"
   },
@@ -54,7 +54,7 @@
   "category": "gpu",
   "name": "MSI GeForce RTX 5070 Ti VENTUS 3X OC Black 16G Graphics Card",
   "model_number": "RTX 5070 TI 16G VENTUS 3X OC BLACK",
-  "condition": "unknown",
+  "condition": "new",
   "attrs": {
    "chipset": "RTX 5070 Ti"
   },
