@@ -1,5 +1,5 @@
 // web/src/components/hyphenate.tsx
-// Hyphenate screen: the purchasing seat and the AP clerk seat for a simulated studio. Vidyut asks, the controls answer,
+// Hyphenate screen: the purchasing seat and the AP clerk seat for a simulated studio. The buyer asks, the controls answer,
 // and every decision carries its reason. Reads only lib/hyphenate.ts; everything on it is SIM.
 import type { ReactNode } from "react";
 import {
@@ -79,7 +79,7 @@ function DecisionList({ items, company, empty }: { items: Decision[]; company: C
 }
 
 function WhoAsked({ s }: { s: Snapshot }) {
-  const asker = s.pos[0]?.requester ?? "vidyut";
+  const asker = s.pos[0]?.requester ?? "buyer";
   const person = s.company.people.find((p) => p.id === asker);
   const people = s.company.people.filter((p) => !p.system);
   const agents = s.company.people.filter((p) => p.system);
@@ -334,7 +334,7 @@ export function HyphenateScreen(p: HyphenateScreenProps) {
       ) : isBlank(s) ? (
         <section className="card p-[18px]">
           <p className="text-[22px] font-medium">A blank studio.</p>
-          <p className="mt-1 text-muted">No orders or decisions yet. Load the seeded story to see Vidyut&apos;s request, the controller&apos;s no, the short shipment and the held bills.</p>
+          <p className="mt-1 text-muted">No orders or decisions yet. Load the seeded story to see the buyer&apos;s request, the controller&apos;s no, the short shipment and the held bills.</p>
           {p.onLoadMoment && (
             <button
               type="button"

@@ -1,27 +1,27 @@
 {
  "recorded_at": "2026-10-25T06:02:24Z",
  "origin": "SIM",
- "source": "hyphenate/api.py, story=moment",
+ "source": "hyphenate/api.py, story=moment; teammate names replaced with roles (the buyer) after recording, #412",
  "raw": {
   "company": {
    "name": "Pixel Forge Games (SIM)",
    "origin": "SIM",
    "people": [
     {
-     "id": "vidyut",
-     "name": "Vidyut",
+     "id": "buyer",
+     "name": "The buyer",
      "role": "employee",
      "dept": "engineering",
      "acts_for": [],
      "system": false
     },
     {
-     "id": "vidyut-assistant",
+     "id": "buyer-assistant",
      "name": "Pepper's Assistant",
      "role": "employee",
      "dept": "engineering",
      "acts_for": [
-      "vidyut"
+      "buyer"
      ],
      "system": false
     },
@@ -118,7 +118,7 @@
    "pos": [
     {
      "id": "PO-1001",
-     "requester": "vidyut",
+     "requester": "buyer",
      "dept": "engineering",
      "vendor_id": "bestbuy",
      "status": "replanned",
@@ -179,7 +179,7 @@
     },
     {
      "id": "PO-1002",
-     "requester": "vidyut",
+     "requester": "buyer",
      "dept": "engineering",
      "vendor_id": "bestbuy",
      "status": "partially_received",
@@ -391,7 +391,7 @@
     },
     {
      "id": "gadget-grove",
-     "name": "Gadget Grove (Vedant)",
+     "name": "Gadget Grove",
      "payee_id": "gadget-grove@pay.example.test",
      "bank_account": "acct_gg_9087",
      "terms": "net30",
@@ -465,10 +465,10 @@
      "subject": "po:PO-1001",
      "outcome": "drafted",
      "codes": [],
-     "reason": "Vidyut asked for 3x RTX-5070-TI from Best Buy (MIRROR listing, SIM payee) for $3,749.97",
+     "reason": "The buyer asked for 3x RTX-5070-TI from Best Buy (MIRROR listing, SIM payee) for $3,749.97",
      "actor": {
       "kind": "person",
-      "id": "vidyut"
+      "id": "buyer"
      },
      "rule": {
       "id": "approval.route",
@@ -530,7 +530,7 @@
      "codes": [
       "self_approval"
      ],
-     "reason": "Vidyut requested this PO and cannot approve it",
+     "reason": "The buyer requested this PO and cannot approve it",
      "actor": {
       "kind": "rule",
       "id": "sod.requester_cannot_approve"
@@ -542,13 +542,13 @@
      "evidence": [
       {
        "type": "person",
-       "id": "vidyut",
+       "id": "buyer",
        "detail": "attempted by"
       },
       {
        "type": "po",
        "id": "PO-1001",
-       "detail": "requester vidyut"
+       "detail": "requester buyer"
       }
      ],
      "parents": [],
@@ -582,7 +582,7 @@
       {
        "type": "po",
        "id": "PO-1001",
-       "detail": "requester vidyut"
+       "detail": "requester buyer"
       }
      ],
      "parents": [],
@@ -627,10 +627,10 @@
      "subject": "po:PO-1002",
      "outcome": "drafted",
      "codes": [],
-     "reason": "Vidyut asked for 2x RTX-5070-TI from Best Buy (MIRROR listing, SIM payee) for $2,499.98",
+     "reason": "The buyer asked for 2x RTX-5070-TI from Best Buy (MIRROR listing, SIM payee) for $2,499.98",
      "actor": {
       "kind": "person",
-      "id": "vidyut"
+      "id": "buyer"
      },
      "rule": {
       "id": "approval.route",
@@ -734,7 +734,7 @@
       {
        "type": "po",
        "id": "PO-1002",
-       "detail": "requester vidyut"
+       "detail": "requester buyer"
       }
      ],
      "parents": [

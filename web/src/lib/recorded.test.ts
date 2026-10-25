@@ -36,3 +36,12 @@ test("recordedLine labels a snapshot SIM with its UTC capture time", () => {
 test("recordedLine never claims a time it cannot read", () => {
   assert.equal(recordedLine("not a time"), "Recorded snapshot (SIM), capture time unknown. The live version runs locally.");
 });
+
+test("the recorded Hyphenate snapshot and its screen name no teammate: the requester is the buyer (#412)", () => {
+  const fixture = readFileSync(new URL("./fixtures/hyphenate-recorded.json", import.meta.url), "utf8");
+  assert.doesNotMatch(fixture, /vidyut|vedant/i);
+  const screen = readFileSync(new URL("../components/hyphenate.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(screen, /vidyut|vedant/i);
+  const s = parseSnapshot(load("hyphenate-recorded.json").raw)!;
+  assert.ok(s.company.people.some((p) => p.name === "The buyer"));
+});
