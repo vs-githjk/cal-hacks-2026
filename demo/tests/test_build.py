@@ -11,7 +11,6 @@ import time
 import pytest
 
 from demo import build
-from demo.bridge import Step
 from demo.common import MIRROR, SIM
 from demo.sellers import Line, Seller
 from demo.tests.test_bridge import FakeCartesia

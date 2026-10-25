@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from demo import build
 
 SAMPLE = json.loads((Path(__file__).resolve().parents[2] / "contracts" / "samples" / "build-board.sample.json").read_text())
@@ -201,3 +199,19 @@ def test_the_samples_own_top_level_types_hold():
     v = build.build_view(rows(), [], [])
     for k, want in (("goalId", str), ("buyerId", str), ("budget", float), ("spent", float), ("origin", str)):
         assert isinstance(v[k], want)
+
+
+def test_events_with_the_same_second_keep_the_story_order_plan_rounds_ready_live_check_call_receipts():
+    rr = rows(approval={"state": "approved", "events": [{"at": T.format(5), "kind": "call", "text": "Calling", "origin": "SIM"},
+                                                        {"at": T.format(5), "kind": "approved", "text": "Approved", "origin": "SIM"}]},
+              mandates=[{"hash": "h", "dealId": "d", "amount": 1.0, "payee": "s", "part": "gpu"}],
+              payments=[{"mandateHash": "h", "paymentRef": "ch_1", "amount": 1.0, "mode": "sim", "at": T.format(5), "text": "SIM payment", "part": "gpu"}],
+              live={"gpu": {"state": "ok", "price": 1.0, "fetchedAt": None, "origin": "LIVE", "quoted": 1.0, "at": T.format(5), "text": "GPU: live"}})
+    for r in rr["rounds"]:
+        r["openedAt"], r["closedAt"] = T.format(5), T.format(5)
+    v = build.build_view(rr, [{"at": T.format(5), "kind": "plan", "text": "Plan", "parts": []}], [])
+    order = [e["kind"] for e in v["events"]]
+    assert order[0] == "plan" and order[1] == "round_open"
+    assert order.index("locked") < order.index("call") < order.index("approved") < order.index("receipt")
+    texts = [e["text"] for e in v["events"]]
+    assert texts.index(next(t for t in texts if t.startswith("Build ready"))) < texts.index("GPU: live") < texts.index("Calling")

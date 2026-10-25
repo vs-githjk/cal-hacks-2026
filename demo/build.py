@@ -27,9 +27,8 @@ import concurrent.futures as cf
 import json
 import math
 import os
-import re
+import subprocess
 import sys
-import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -133,7 +132,9 @@ def build_view(market_rows: dict, plan_events: list, checks: list) -> dict:
         needs.setdefault(n["part"], []).append(n)
     live = market_rows.get("liveChecks") or {}
     replans = [e for e in plan_events if e.get("kind") == "replan"]
-    parts, events, champions = [], [], {}
+    parts, champions = [], {}
+    events = [{"at": e.get("at") or "", "kind": e["kind"], "text": e["text"], "parts": list(e.get("parts") or []), "origin": _origin(e.get("origin"))}
+              for e in plan_events]
     for item in market_rows.get("goalItems") or []:
         part, label = item["part"], item["label"]
         if item.get("skippedOwnedPartId"):
@@ -180,9 +181,6 @@ def build_view(market_rows: dict, plan_events: list, checks: list) -> dict:
                         events.append({"at": at, "kind": "locked", "text": f"{label}: {c['persona']} locked at {money(c['landed'])}",
                                        "parts": [part], "origin": c["origin"]})
         parts.append(entry)
-    for part, lv in live.items():
-        if lv.get("text"):
-            events.append({"at": lv.get("at") or "", "kind": "locked", "text": lv["text"], "parts": [part], "origin": _origin(lv.get("origin"))})
     buying = [p for p in parts if p["status"] != "owned"]
     total = round(sum(c["landed"] for c in champions.values()), 2)
     sellers = len({c["sellerId"] for c in champions.values()})
@@ -190,6 +188,9 @@ def build_view(market_rows: dict, plan_events: list, checks: list) -> dict:
         done = max((r.get("closedAt") or "" for r in rounds.values()), default="")
         events.append({"at": done, "kind": "locked", "text": f"Build ready: {len(buying)} parts, {sellers} sellers, {money(total)}",
                        "parts": [], "origin": _weakest([c["origin"] for c in champions.values()])})
+    for part, lv in live.items():
+        if lv.get("text"):
+            events.append({"at": lv.get("at") or "", "kind": "locked", "text": lv["text"], "parts": [part], "origin": _origin(lv.get("origin"))})
     ap = market_rows.get("approval") or {}
     mandates = [{"sellerId": m["payee"], "amount": float(m["amount"]), "mandateHash": m["hash"], "part": m.get("part", "")}
                 for m in market_rows.get("mandates") or []]
@@ -208,10 +209,7 @@ def build_view(market_rows: dict, plan_events: list, checks: list) -> dict:
         events.append({"at": p.get("at") or "", "kind": "receipt", "text": p.get("text") or f"Payment recorded: {p['paymentRef']}",
                        "parts": [p["part"]] if p.get("part") else [],
                        "origin": LIVE if p.get("mode") == "stripe_test" else SIM})
-    for e in plan_events:
-        events.append({"at": e.get("at") or "", "kind": e["kind"], "text": e["text"], "parts": list(e.get("parts") or []),
-                       "origin": _origin(e.get("origin"))})
-    events.sort(key=lambda e: e["at"])   # stable: same-time events keep the order they were added in
+    events.sort(key=lambda e: e["at"])   # stable: same-time events keep the order they were added in (the plan first)
     lines = []
     for c in checks or []:
         lines.append({"a": c["a"], "b": c["b"], "rule": c["rule"], "state": c["state"] if c.get("state") in CHECK_STATES else "unknown",
@@ -908,7 +906,7 @@ def main(argv: Optional[list] = None) -> int:
         out.blank()
         out.note(f"STOPPED by the market: {e}")
         return 1
-    except (OSError, __import__("subprocess").CalledProcessError) as e:
+    except (OSError, subprocess.CalledProcessError) as e:
         out.blank()
         out.note(f"STOPPED: the market is not reachable or a tool failed ({type(e).__name__}). Start it with `python3 scripts/launch.py up`.")
         return 1
