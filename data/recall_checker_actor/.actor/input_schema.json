@@ -1,0 +1,39 @@
+{
+ "title": "Recall check input",
+ "type": "object",
+ "schemaVersion": 1,
+ "properties": {
+  "brand": {
+   "title": "Brand",
+   "type": "string",
+   "editor": "textfield",
+   "sectionCaption": "One product",
+   "description": "The maker's brand, for example Anker, Samsung or MSI. Required: the recall search is by brand.",
+   "prefill": "Anker"
+  },
+  "product": {
+   "title": "Product name and model",
+   "type": "string",
+   "editor": "textfield",
+   "description": "The product name with its model number if you have it, for example PowerCore 10000 A1263. A model number gives an exact match.",
+   "prefill": "PowerCore 10000 A1263"
+  },
+  "upc": {
+   "title": "UPC (optional)",
+   "type": "string",
+   "editor": "textfield",
+   "description": "The barcode number, if you have it (several codes separated by commas also work). A UPC listed on a recall is an exact match."
+  },
+  "products": {
+   "title": "Many products",
+   "type": "array",
+   "editor": "stringList",
+   "sectionCaption": "Many products in one run",
+   "description": "One product per line as Brand | Product name | UPC (the UPC is optional), for example: Samsung | Galaxy Note7",
+   "prefill": [
+    "Samsung | Galaxy Note7",
+    "Anker | Nano Charger 30W"
+   ]
+  }
+ }
+}

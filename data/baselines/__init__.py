@@ -20,6 +20,9 @@ from data.mirror.price_spread import load, out_of_stock
 
 HERE = Path(__file__).resolve().parent
 RETAIL = {"bestbuy", "microcenter", "bh", "newegg"}  # amazon is out until the seller of record is captured
+# #308: one local store's own listings (Central Computers SF, condition not stated, stock the store's own figure). Kept out of
+# the retail median on purpose: they are an agent's bid, and a bid must not move the baseline the advocate judges it against.
+LOCAL_STORE = {"centralcomputers"}
 MARKETPLACE = {"ebay_live"}
 SOLD = {"ebay_sold"}
 WINDOW = timedelta(hours=24)

@@ -26,7 +26,9 @@ def executed(run, **kw):
     steps = bridge.plan(run, delay=0, rounds=1, **kw)
     log = []
     names = {s.actor for s in steps} | {"buyer", "referee"}
-    bridge.execute(steps, {n: Fake(log, n) for n in names}, delay=0, say=lambda s: None, sleep=lambda x: None, clock=lambda: 0.0)
+    approved = {"step": "approval_call", "approved": True, "reason": None, "call_id": "c", "voice_approval_id": "apr_test"}   # #251: no scripted approval
+    bridge.execute(steps, {n: Fake(log, n) for n in names}, delay=0, say=lambda s: None, sleep=lambda x: None, clock=lambda: 0.0,
+                   approver=lambda step: approved)
     return log
 
 
@@ -123,6 +125,9 @@ def test_the_agent_addresses_load_when_the_stage_runs_as_a_script():
     import sys
     from pathlib import Path
 
+    # agents/common.py imports uagents; without it the stage correctly prints "no agent rows". CI installs
+    # agents/requirements.txt (python-tests.yml), so there this test runs; a bare system python skips it.
+    pytest.importorskip("uagents", reason="uagents is not installed (pip install -r agents/requirements.txt)")
     root = Path(__file__).resolve().parents[2]
     out = subprocess.run([sys.executable, str(root / "demo" / "stage.py"), "--dry-run"], capture_output=True, text=True, timeout=180,
                          cwd=root)

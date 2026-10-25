@@ -34,6 +34,7 @@ SUMMARIES: dict[str, str] = {
     "advocate.fit_unknown": "Fit could not be confirmed from the listing details",
     "advocate.ok": "No problems found in the checks",
     "advocate.unverified": "Some checks could not run",
+    "advocate.mirror_not_orderable": "This store is shown for comparison only and cannot be bought from here",
     "fit": "This part does not fit your build",
     "fit.gpu_length": "The card is longer than your case allows",
     "fit.psu_wattage": "Your power supply is below what this card needs",

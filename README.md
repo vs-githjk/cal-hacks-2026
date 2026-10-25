@@ -19,7 +19,11 @@ Tell it the computer part you need. It reads real store listings, vetoes the tra
 
 </div>
 
-<!-- hero screenshot: docs/images/hero.png (coming) -->
+## Status
+
+**The headline flow is the full PC build, and it is in progress.** You describe the whole PC. The agent plans it, runs one sealed knockout round per part, re-plans when two parts clash, and makes one phone call to approve the whole build. Buying a single card, the reference scenario below, is one part of that flow, and it works today.
+
+**Live now:** the web app at [tech-bazaar-app.vercel.app](https://tech-bazaar-app.vercel.app), backed by the market on SpacetimeDB Maincloud (database `tech-bazaar`). A round appears there when one is run.
 
 ## Overview
 
@@ -31,7 +35,7 @@ Tech Bazaar is a buyer's agent for computer gear. You give it a goal, not a one-
 
 **It works today without a single outside seller agent.** It reads real, dated store listings (labelled MIRROR) and turns each into a bid, so the protection above runs on real prices now. If no bid comes in, it names the best public listing and buys nothing.
 
-**The reference scenario.** Vidyut needs an RTX 5070 Ti that fits his 305 mm case, under $1,300. Eleven offers arrive in a sealed round: six from real store listings, five from simulated sellers. The cheapest, $757.44, claims "new" while its page says open box, so the advocate vetoes it with the link. Two more are too long for the case (336 mm and 342 mm). The winner is the ASUS Prime RTX 5070 Ti at 304 mm by the maker's spec, $1,299.99 at Best Buy before sales tax (shipping: not captured). That is over Vidyut's $250 allowance, so the agent calls him before it pays.
+**The reference scenario.** Vidyut needs an RTX 5070 Ti that fits his 305 mm case, under $1,300. Seventeen offers arrive in a sealed round: twelve from real store listings, five from simulated sellers. The cheapest, $757.44, claims "new" while its page says open box, so the advocate vetoes it with the link. Two more cheap offers are too long for the case, and the advocate vetoes each with a source. Best Buy's two cheaper cards (338 mm and 342 mm by the maker's spec) never become bids for the same reason. The winner is the ASUS Prime RTX 5070 Ti at 304 mm by the maker's spec, $1,299.99 at Best Buy before sales tax (shipping: not captured). That is over Vidyut's $250 allowance, so the agent calls him before it pays.
 
 **The referee is deterministic.** The same offers always rank the same way. Outcomes change only because sellers and their stock change ([docs/ARENA_RULES.md](docs/ARENA_RULES.md)).
 
@@ -117,11 +121,11 @@ Planned, not built: richer selling moves (bundles, perks chosen per buyer) and a
 
 ## What is real and what is simulated
 
-Every bid, claim and screen carries a badge driven by the `source` field in the contracts. Full table: [docs/REAL_VS_SIMULATED.md](docs/REAL_VS_SIMULATED.md). Status as of Oct 24, 2026, 16:15 PDT.
+Every bid, claim and screen carries a badge driven by the `source` field in the contracts. Full table: [docs/REAL_VS_SIMULATED.md](docs/REAL_VS_SIMULATED.md). Status as of Oct 24, 2026, 17:00 PDT.
 
 | Component | Label | Notes |
 |---|---|---|
-| Store listings and prices | MIRROR | Real public listings in dated snapshots ([data/mirror/](data/mirror/)). We also used Apify to collect 12 real RTX 5070 Ti listings from Central Computers in San Francisco; the store is a listing source, not a partner, and adding it as a MIRROR seller is in progress |
+| Store listings and prices | MIRROR | Real public listings in dated snapshots ([data/mirror/](data/mirror/)). We also used Apify to collect 12 real RTX 5070 Ti listings from Central Computers in San Francisco; the store is a listing source, not a partner. Its listing adapter is merged; it does not bid in the reference round yet |
 | Seller agents and their bids | SIM | Our agents bid from mirrored listings; no outside shop has bid yet |
 | Buyer's goal and owned parts | SIM | Scripted for the reference scenario; the buyer is Vidyut |
 | Fit checks, claim checks, Shield | LIVE | Real code on every bid; claim checks run on pages we host for the demo |
@@ -131,7 +135,7 @@ Every bid, claim and screen carries a badge driven by the `source` field in the 
 | Receipts | LIVE in chat | The buyer agent sends the receipt after the charge and at settlement. The emailed receipt goes through ASI:One's Gmail connector from the buyer's own Gmail account, tested once live. Order, shipped and tracking messages are written ([agents/buyer/post_purchase.py](agents/buyer/post_purchase.py)) but not yet sent by the running agent; carrier and tracking are SIM |
 | Bright Data | built, env-gated | Re-checks the winner's price live just before the call when its key is set; without it the dated MIRROR price stays, and the line says so. One live call returned the ASUS Prime at $1,299.99 (Sat 02:55) |
 | Tiger Data | built, env-gated | Each round's prices are written to Tiger Data when its service is set, never on the money path; connection checked Sat 02:53 |
-| CRS identity and fraud check | built, env-gated | One CRS check of the winning seller at the payment gate, before the call and the charge; a business payee needs a verified check, and an error, a timeout or "not configured" holds the payment. Not run live yet: the live sandbox check needs a test-identities file |
+| CRS identity and fraud check | built, env-gated | One CRS check of the winning seller at the payment gate, before the call and the charge; a business payee needs a verified check, and an error, a timeout or "not configured" holds the payment. Run live against the CRS sandbox on Oct 24 at 16:37 PDT, with test identities for three simulated sellers: seller 1 and seller 2 came back verified_stable, seller 3 not_verified |
 | UCP | built, draft spec | Seller Kit shops and the buyer client follow the draft spec; not certified |
 | Wind tunnel buyers | SIM | Simulated by design |
 
@@ -142,10 +146,8 @@ Not merged, or merged but not yet running in the app. None of this is described 
 - **The full PC build.** One sentence becomes a build plan, one round per part, one call for the whole build, one mandate per seller and a receipt per part ([#343](https://github.com/vs-githjk/cal-hacks-2026/issues/343), [#344](https://github.com/vs-githjk/cal-hacks-2026/issues/344), [#345](https://github.com/vs-githjk/cal-hacks-2026/issues/345)).
 - **Sealed knockout rounds.** Up to three best-and-final stages; rule-breakers and last place are knocked out with reasons, and survivors only hear "still in" ([#336](https://github.com/vs-githjk/cal-hacks-2026/issues/336), [#337](https://github.com/vs-githjk/cal-hacks-2026/issues/337)).
 - **Market Pulse** on a screen and in the seller agents (module merged, see For sellers).
-- **One shared live market.** The SpacetimeDB Maincloud deploy script and `launch.py --maincloud` are merged; the publish is pending. The web app's Vercel deploy is in progress.
 - **Visa TAP conformance.** Matching `pay/tap.py` to Visa's published Trusted Agent Protocol ([#284](https://github.com/vs-githjk/cal-hacks-2026/issues/284)).
-- **CRS live check.** The gate is merged; one live sandbox check waits on the test-identities file.
-- **Central Computers as a MIRROR seller** ([#324](https://github.com/vs-githjk/cal-hacks-2026/pull/324)).
+- **Central Computers bidding in the round.** Its MIRROR listing adapter and a dated snapshot are merged ([data/mirror/central_computers.py](data/mirror/central_computers.py)); it does not bid in the reference round yet.
 - **No typed APPROVE in ASI:One.** Today a typed APPROVE reply starts the approval call (the call still decides); this change removes the reply ([#234](https://github.com/vs-githjk/cal-hacks-2026/pull/234)).
 - **Order, shipped and tracking messages** sent by the running buyer agent.
 
@@ -172,11 +174,11 @@ Shield on its development set stops 30 of 30, but its rules were written against
 | Visa | Trusted Agent Protocol (style), Visa test card | Signed agent requests; the test card behind the Stripe charge. Conformance to the published spec is in progress |
 | Stripe | Test mode | The one sandbox charge, idempotent on the mandate hash |
 | Cartesia | Voice agent, outbound calls | The approval call, the only approval above the allowance |
-| Apify | Store Actors, plus four public Actors of our own: [Listing Claim Checker](https://apify.com/anoopibrampur/tech-bazaar-claim-check), [PC Build Compatibility Checker](https://apify.com/anoopibrampur/pc-build-compatibility-checker), [Electronics Recall Checker](https://apify.com/anoopibrampur/electronics-recall-checker), [Seller Agent-Readiness Report](https://apify.com/anoopibrampur/seller-agent-readiness-report) | Listing mirrors, claim checks, fit checks and real San Francisco listings. Source for the first two is in `data/`; the recall and readiness Actors are in review |
+| Apify | Store Actors, plus four public Actors of our own on the Apify Store: [Listing Claim Checker](https://apify.com/anoopibrampur/tech-bazaar-claim-check), [PC Build Compatibility Checker](https://apify.com/anoopibrampur/pc-build-compatibility-checker), [Electronics Recall Checker](https://apify.com/anoopibrampur/electronics-recall-checker), [Seller Agent-Readiness Report](https://apify.com/anoopibrampur/seller-agent-readiness-report) | Listing mirrors, claim checks, fit checks and real San Francisco listings. Four Actor sources are in this repo: claim check, compatibility and recall (all on the Store) and an injection screen (not on the Store). The readiness Actor's source is in review ([#309](https://github.com/vs-githjk/cal-hacks-2026/pull/309)) |
 | Bright Data | Scraper API | A live re-check of the winner's price before the call (built, env-gated) |
 | Tiger Data | Time-series Postgres | Each round's prices, the history behind Market Pulse (built, env-gated) |
-| CRS | Credit API sandbox | One identity and fraud check of the payee at the payment gate (built, env-gated) |
-| SpacetimeDB | Reducers and live state | Auction state; floors, one winner and approval-before-payment enforced in reducers. Maincloud publish pending |
+| CRS | Credit API sandbox | One identity and fraud check of the payee at the payment gate (built, env-gated; run live against the sandbox) |
+| SpacetimeDB | Reducers and live state | Auction state; floors, one winner and approval-before-payment enforced in reducers. Live on Maincloud as `tech-bazaar` |
 | Anthropic | Claude Haiku 5.5 | An opt-in Shield classifier for secret asks (`shield/classifier.py`, fails closed for sellers), Market Pulse coaching from a closed list (in progress), and optional seller persona lines. Claude never decides money |
 
 Public data: the CPSC recalls API and [docyx/pc-part-dataset](https://github.com/docyx/pc-part-dataset) (MIT) for compatibility fields.

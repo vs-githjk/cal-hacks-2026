@@ -63,8 +63,17 @@ class Time:
         return self.t
 
 
-def go(argv, *, rows=UP, fail=None, inputs=None, log=None, result_rows="market", on_ask=None):
-    """result_rows: the market's round_result rows (default: the market agrees with the demo's winner; None: unreadable)."""
+def go(argv, *, rows=UP, fail=None, inputs=None, log=None, result_rows="market", on_ask=None, through_gate=True):
+    """result_rows: the market's round_result rows (default: the market agrees with the demo's winner; None: unreadable).
+    through_gate: there is no scripted approval (#251), so a run only reaches beat 5 with --live-call and an approver that says
+    approved. By default this adds --live-call and a fake approver; False runs the argv as given (a run with no call)."""
+    if through_gate and "--live-call" not in argv:
+        mp = pytest.MonkeyPatch()
+        mp.setattr(bridge, "live_approver_for", lambda *a, **k: (Approver(True), "live call: fake"))
+        try:
+            return go([*argv, "--live-call"], rows=rows, fail=fail, inputs=inputs, log=log, result_rows=result_rows, on_ask=on_ask)
+        finally:
+            mp.undo()
     log = [] if log is None else log
     if result_rows == "market":
         result_rows = market_rows(RUN["run"], RUN["run"]["beats"]["2"]["winner"]["seller_id"])
@@ -271,10 +280,15 @@ def test_live_call_not_configured_is_a_denial_not_a_charge(capsys):
     assert "create_mandate" in reducers(log)
 
 
-def test_without_live_call_the_simulated_approval_is_recorded(monkeypatch):
+def test_without_live_call_the_run_stops_at_the_approval_gate_and_pays_nothing(monkeypatch, capsys):
+    """#251: no scripted approval. No call is asked for, the mandate is made, and nothing after it is recorded."""
     monkeypatch.setattr(bridge, "live_approver_for", lambda *a, **k: pytest.fail("no live call was asked for"))
-    code, log, *_ = go(["--auto", "--step-delay", "0"])
-    assert code == 0 and "record_approval" in reducers(log) and "record_payment" in reducers(log)
+    code, log, *_ = go(["--auto", "--step-delay", "0"], through_gate=False)
+    out = capsys.readouterr().out
+    assert code == 1 and "create_mandate" in reducers(log)
+    assert not any(r in reducers(log) for r in ("record_approval", "record_payment", "record_loss_report"))
+    assert reducers(log).count("open_round") == 1                # beat 5 never starts
+    assert "approval needs the real phone call (--live-call); nothing was paid" in out
 
 
 def test_live_call_cannot_be_combined_with_stripe():
@@ -285,7 +299,7 @@ def test_live_call_cannot_be_combined_with_stripe():
 def test_live_cue_differs_and_names_the_code_and_the_denial_rule():
     live, sim = stage.cue_for(4, live_call=True), stage.cue_for(4, live_call=False)
     assert live != sim and "code" in live.lower() and "approve" in live.lower() and "nothing is paid" in live.lower()
-    assert "simulated" in sim.lower()
+    assert "real phone call" in sim.lower() and "--live-call" in sim and "nothing is paid" in sim.lower() and "simulated" not in sim.lower()
     for n in (1, 2, 3, 5):
         assert stage.cue_for(n, live_call=True) == stage.cue_for(n, live_call=False)
 
@@ -423,7 +437,7 @@ def test_a_different_market_number_one_prints_divergence_before_the_beat_four_cu
     out = capsys.readouterr().out
     assert code == 0
     gg = next(x for x in run["beats"]["2"]["sellers"] if x["id"] == "gadget-grove")
-    assert next(a for _, r, a in log if r == "create_mandate")["payee"] == gg["payee"]    # #194: beat 4 pays the market's #1
+    assert next(a for _, r, a in log if r == "create_mandate")["payee"] == gg["id"]    # #194, #240: beat 4 pays the market's #1 by seller id
     assert out.index("DIVERGENCE") < out.index("BEAT 4 of 5")
     assert out.index("BEAT 2 of 5") < out.index("DIVERGENCE") < out.index("BEAT 3 of 5")
     assert any("not the demo's winner" in p for p in asked)         # --auto pauses once so the operator cannot miss it

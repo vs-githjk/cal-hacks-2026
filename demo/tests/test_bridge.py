@@ -157,10 +157,11 @@ def test_a_scripted_approval_never_records_a_live_payment(run, steps):
     assert all(p.args["payment_ref"].startswith("ch_sim_") for p in lp) and "pi_test_scripted" not in lp[0].say
 
 
-def test_a_scripted_approval_is_labelled_sim_script_not_voice(steps):
+def test_without_a_call_the_approval_step_says_the_run_stops_there(steps):
+    """#251: no scripted approval. The plan's approval step names the call's method and says what a run with no call does."""
     appr = next(s for s in steps if s.reducer == "record_approval")
-    assert appr.args["method"] == "sim_script" and appr.tag == bridge.SIM
-    assert "no phone call" in appr.say
+    assert appr.args["method"] == "voice_code" and appr.tag == bridge.SIM
+    assert bridge.NO_CALL_LINE in appr.say and "stops at this gate" in appr.say
 
 
 def test_money_steps_use_the_demos_real_mandate(run, steps):
@@ -169,7 +170,7 @@ def test_money_steps_use_the_demos_real_mandate(run, steps):
     assert mand["hash"] == m["hash"] and mand["amount"] == 1299.99 and mand["payee"] == m["payee"]
     assert mand["buyer_id"] == "vidyut" and mand["requested_by"] == ""
     appr = next(s for s in steps if s.reducer == "record_approval").args
-    assert appr == {"mandate_hash": m["hash"], "method": "sim_script", "approved_by": "vidyut"}
+    assert appr == {"mandate_hash": m["hash"], "method": "voice_code", "approved_by": "vidyut", "voice_approval_id": ""}
     pays = [s.args for s in steps if s.reducer == "record_payment"]
     assert len(pays) == 2 and pays[0] == pays[1] and pays[0]["payment_ref"] == run["beats"]["4"]["charge"]["id"]
 
@@ -189,12 +190,17 @@ def test_round_two_has_distinct_bid_ids_and_a_lower_learner_price(run):
     assert p2 < p1
 
 
+def approves(step):
+    """An approver that says approved, so the run goes past the gate (the real one is a phone call)."""
+    return {"step": "approval_call", "approved": True, "reason": None, "call_id": "call_test", "voice_approval_id": "apr_test"}
+
+
 def test_execute_calls_in_order_paces_and_waits_for_the_deadline(steps):
     log, sleeps, now = [], [], [100.0]
     def sleep(x):
         sleeps.append(x)
         now[0] += x
-    bridge.execute(steps, clients(log), delay=2.0, say=lambda s: None, sleep=sleep, clock=lambda: now[0])
+    bridge.execute(steps, clients(log), delay=2.0, say=lambda s: None, sleep=sleep, clock=lambda: now[0], approver=approves)
     assert [(a, r) for a, r, _ in log] == [(s.actor, s.reducer) for s in steps]
     paced = [x for x in sleeps if x == 2.0]
     assert len(paced) == sum(1 for s in steps if s.pause)
@@ -205,7 +211,7 @@ def test_close_retries_while_the_round_is_still_open_and_accepts_already_closed(
     log = []
     fail = {"close_round": ["round is still open until its deadline", "round already closed"]}
     sleeps = []
-    bridge.execute(steps, clients(log, fail), delay=0, say=lambda s: None, sleep=sleeps.append, clock=lambda: 0.0)
+    bridge.execute(steps, clients(log, fail), delay=0, say=lambda s: None, sleep=sleeps.append, clock=lambda: 0.0, approver=approves)
     assert [r for _, r, _ in log].count("close_round") == 2 and 1.0 in sleeps
     assert log[-1][1] == "record_loss_report" and "record_payment" in [r for _, r, _ in log]
 
@@ -298,7 +304,8 @@ def test_the_gate_builds_a_fresh_pending_mandate_from_the_markets_rank_one(run):
     gate = bridge.DealGate(run)
     m = gate.prepare(Fake([], "referee", rows=market_rows(run)))
     assert m["status"] == "pending" and m["hash"] != old["hash"]
-    assert (m["deal_id"], m["amount"], m["payee"], m["buyer_id"]) == (old["deal_id"], old["amount"], old["payee"], old["buyer_id"])
+    assert (m["deal_id"], m["amount"], m["buyer_id"]) == (old["deal_id"], old["amount"], old["buyer_id"])
+    assert m["payee"] == "best-buy"          # #240: the mandate pays the winning seller id, not a SIM test address
     steps = [gate.bind(x) for x in bridge.plan(run, delay=0, rounds=1, live_call=True)]
     assert next(x for x in steps if x.reducer == "create_mandate").args["hash"] == m["hash"]
     assert [x.args["mandate_hash"] for x in steps if x.reducer in ("record_approval", "record_payment")] == [m["hash"]] * 3
@@ -321,9 +328,12 @@ def test_h5_the_bridge_pays_the_markets_number_one_not_the_demos_winner(run):
         outcomes = bridge.execute(bridge.plan(run, delay=0, rounds=1, live_call=live), clients(log, rows=rows), delay=0,
                                   say=lambda s: None, sleep=lambda x: None, clock=lambda: 0.0, approver=approver, deal_gate=gate)
         made = next(a for _, r, a in log if r == "create_mandate")
-        assert made["payee"] == gg["payee"] and made["deal_id"] == f"deal-{rows[0][2]}" and made["amount"] == rows[0][6]
+        assert made["payee"] == gg["id"] and made["deal_id"] == f"deal-{rows[0][2]}" and made["amount"] == rows[0][6]
         assert all(a["mandate_hash"] == made["hash"] for _, r, a in log if r in ("record_approval", "record_payment"))
-        assert "record_payment" in [r for _, r, _ in log] and all(o["approved"] for o in outcomes)
+        if live:
+            assert "record_payment" in [r for _, r, _ in log] and all(o["approved"] for o in outcomes)
+        else:   # #251: no call, no approval: the run ends at the gate with the mandate pending
+            assert not any(r in ("record_approval", "record_payment") for _, r, _ in log) and not outcomes[0]["approved"]
 
 
 @pytest.mark.parametrize("rows", [[], None, "unknown", "two-firsts"])
@@ -450,7 +460,8 @@ def test_not_configured_denies_without_placing_a_call(run):
     approver = bridge.make_live_approver(gate, None, unconfigured="missing CARTESIA_API_KEY", buyer_name="Vidyut",
                                          on_code=lambda c, w: pytest.fail("no code is issued when nothing can be called"))
     log, outcomes = run_with(run, approver, gate)
-    assert outcomes == [{"step": "approval_call", "approved": False, "reason": "not_configured: missing CARTESIA_API_KEY", "call_id": None}]
+    assert outcomes == [{"step": "approval_call", "approved": False, "reason": "not_configured: missing CARTESIA_API_KEY", "call_id": None,
+                         "voice_approval_id": None}]
     kinds = [r for _, r, _ in log]
     assert "create_mandate" in kinds and "record_approval" not in kinds and "record_payment" not in kinds
 
