@@ -8,6 +8,7 @@ import { ANON_MAX, ENTRY_RADIUS, SELLER_COLORS, STACK_MAX, TABLE, WINNER_SEAT, l
 import type { ArenaScene, Beat } from "@/lib/arenaScene";
 import { formatMoney } from "@/lib/money";
 import type { Origin } from "@/lib/screens";
+import { SHIELD } from "@/lib/brand";
 
 type Three = typeof THREE;
 
@@ -393,7 +394,7 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
       scene.add(group);
       return { key: k, kind, sig: "", group, mats, scale, pad, arms, arm: "rest", vis: fresh(), to: fresh(), tier: 0, aimSign: 1, tw: null };
     };
-    // Bazaar Shield is a stone pedestal with a gold-rimmed shield, not a person: it guards the gate.
+    // The Smell Test (Shield) is a stone pedestal with a gold-rimmed shield, not a person: it guards the gate.
     const addShield = (): Fig => {
       const group = new T.Group();
       group.rotation.order = "YXZ";
@@ -929,7 +930,7 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
 const FIXED: { key: string; name: string }[] = [
   { key: "buyer", name: "Buyer agent" },
   { key: "advocate", name: "Advocate" },
-  { key: "shield", name: "Bazaar Shield" },
+  { key: "shield", name: SHIELD },
   { key: "referee", name: "Referee" },
 ];
 const WORD: Partial<Record<Mark, string>> = { blocked: "Blocked", vetoed: "Vetoed", refused: "Refused", outranked: "Out", winner: "Winner" };

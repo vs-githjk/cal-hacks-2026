@@ -1,6 +1,6 @@
 "use client";
-// Lot Wall: Vidyut's one order on the left, the seller's view of a pooled lot as a wall of bricks on the right.
-// One brick is REAL (Vidyut's, gold, labelled); the rest are SIM builders (grey, labelled). Reads only lib/lot.ts.
+// Lot Wall: the buyer's one order on the left, the seller's view of a pooled lot as a wall of bricks on the right.
+// One brick is REAL (the buyer's, gold, labelled); the rest are SIM builders (grey, labelled). Reads only lib/lot.ts.
 import { useState } from "react";
 import { conditionsText, deadlineText, demandText, realOrder, STAGE_LINE, type Lot, type LotOrder } from "@/lib/lot";
 import { Card, Code, Label, OriginChip, Stat, Tag, money } from "./ui";
@@ -30,7 +30,7 @@ function OrderCard({ o }: { o: LotOrder }) {
   return (
     <Card stripe="amber">
       <div className="mb-1 flex flex-wrap items-center gap-2">
-        <Label>{o.label === "REAL" ? "Vidyut's order" : "Order"}</Label>
+        <Label>{o.label === "REAL" ? "the buyer's order" : "Order"}</Label>
         <span className={`rounded-md border px-1.5 py-0.5 font-mono text-[11px] font-bold ${o.label === "REAL" ? GOLD : "border-line bg-slate-soft text-slate"}`}>{o.label}</span>
       </div>
       <p className="text-[28px] font-semibold tracking-[-0.01em] tabular-nums">{money(o.cap)}</p>
@@ -73,7 +73,7 @@ export function LotScreen({ state, lot }: { state: "loading" | "offline" | "read
             <OrderCard o={shown} />
             {shown.label !== "REAL" && (
               <button type="button" onClick={() => setPicked(null)} className="min-h-11 rounded-lg border border-line px-4 py-2 text-[14px] font-medium">
-                Back to Vidyut&apos;s order
+                Back to the buyer&apos;s order
               </button>
             )}
           </div>
@@ -92,7 +92,7 @@ export function LotScreen({ state, lot }: { state: "loading" | "offline" | "read
               ))}
             </ul>
             <p className="mt-3 text-[13px] text-muted">
-              Gold is Vidyut&apos;s real request. Grey bricks are simulated builders from our wind tunnel, one request each. Each brick shows the most that order will pay, before sales tax.
+              Gold is the buyer&apos;s real request. Grey bricks are simulated builders from our wind tunnel, one request each. Each brick shows the most that order will pay, before sales tax.
             </p>
             <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               <Stat label="Median ceiling" value={money(lot.capMedian)} />

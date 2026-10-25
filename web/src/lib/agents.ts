@@ -9,8 +9,8 @@ export interface AgentInfo {
 }
 
 export const AGENTS: AgentInfo[] = [
-  { key: "buyer", name: "Tech Bazaar Buyer", handle: "@techbazaarbuyer", address: "agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8" },
-  { key: "advocate", name: "Quality Advocate", handle: "@techbazaaradvocate", address: "agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05" },
+  { key: "buyer", name: "Fish Market Buyer", handle: "@techbazaarbuyer", address: "agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8" },
+  { key: "advocate", name: "Fish Market Quality Advocate", handle: "@techbazaaradvocate", address: "agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05" },
   { key: "shield", name: "Shield Client", handle: "@techbazaarshield", address: "agent1q0m2z43cf3hg4cfy87hatf69ulyqkvuylm6mjv53e6y05weqmhjj6k4lknp" },
   { key: "seller1", name: "Byte Bros Outlet", handle: "@techbazaarseller1", address: "agent1qd3gvg54tsaezed0wzpgg34rza4y6kvvfd778nj6h27j20k99d38zd3et9m" },
   { key: "seller2", name: "Silicon Sally's Surplus", handle: "@techbazaarseller2", address: "agent1qw9dvuwgnh570wyk8uukp0w48a03tdpmtuv8csm3qxy6t3udl3ahs2264np" },
