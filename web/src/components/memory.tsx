@@ -57,7 +57,7 @@ const Reason = ({ e, reason }: { e: MemoryEntry; reason: string }) => (reason &&
 
 function RetryButton({ reload }: { reload: () => void }) {
   return (
-    <button onClick={reload} className="mt-2 min-h-11 rounded-lg border border-line px-4 text-[14px] font-medium hover:bg-soft">
+    <button onClick={reload} className="btn mt-3 min-h-11 rounded-xl bg-surface px-4 text-[14px] font-medium text-ink shadow-ring hover:bg-surface-2">
       Try again
     </button>
   );
@@ -102,7 +102,7 @@ function Search({ value, onChange }: { value: string; onChange: (v: string) => v
       onChange={(e) => onChange(e.target.value)}
       aria-label="Filter recorded history by text"
       placeholder="Filter by seller, payee, rule or reason"
-      className="min-h-11 w-full rounded-lg border border-line bg-soft px-3 text-[14px] sm:max-w-sm"
+      className="min-h-11 w-full rounded-xl border-0 bg-surface px-4 text-[15px] shadow-ring outline-none placeholder:text-muted/70 focus:shadow-[var(--shadow-ring),var(--shadow-focus)] sm:max-w-sm"
     />
   );
 }
@@ -110,7 +110,7 @@ function Search({ value, onChange }: { value: string; onChange: (v: string) => v
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[12px] text-muted">{label}</dt>
+      <dt className="text-[12px] font-medium uppercase tracking-[0.04em] text-muted">{label}</dt>
       <dd className="break-words text-[14px]">{children}</dd>
     </div>
   );
@@ -122,7 +122,7 @@ function PurchaseCard({ e }: { e: Purchase }) {
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-[34px] font-semibold leading-none tracking-[-0.02em] tabular-nums">{amountLabel(d)}</p>
+          <p className="text-[40px] font-medium leading-[44px] tracking-[-0.02em] tabular-nums md:text-[48px] md:leading-[52px]">{amountLabel(d)}</p>
           <p className="mt-1 text-[13px] text-muted">before tax</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -131,7 +131,7 @@ function PurchaseCard({ e }: { e: Purchase }) {
         </div>
       </div>
       <p className="mt-3 text-[15px] text-balance">{e.summary}</p>
-      <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+      <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 border-t border-line pt-4 sm:grid-cols-2 lg:grid-cols-4">
         <Fact label="Payee">{text(d.payee)}</Fact>
         <Fact label="Seller">{text(e.seller_id)}</Fact>
         <Fact label="Recorded">{when(e)}</Fact>
@@ -150,7 +150,7 @@ export function PurchasesView() {
   const [q, setQ] = useState("");
   const rows = selectMemory(m.entries, "purchase", q).filter(isPurchase);
   return (
-    <div className="grid gap-3.5">
+    <div className="grid gap-6">
       <Search value={q} onChange={setQ} />
       {rows.map((e) => <PurchaseCard key={e.id} e={e} />)}
       {q && m.entries.length > 0 && rows.length === 0 && <p className="text-muted">No recorded purchase matches that text.</p>}
@@ -175,7 +175,7 @@ function DecisionCard({ e }: { e: MemoryEntry }) {
           <Verdict kind="veto">Vetoed</Verdict>
           <span className="flex items-center gap-2 text-[13px] text-muted">{when(e)} <OriginChip origin={e.origin} /></span>
         </div>
-        <p className="mt-2 text-[18px] font-medium text-balance">{e.summary}</p>
+        <p className="mt-3 text-[18px] font-medium leading-6 tracking-[-0.01em] text-balance">{e.summary}</p>
         <Reason e={e} reason={e.detail.reason} />
         <p className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-muted">
           Seller {text(e.seller_id)} · rule <Code>{text(e.detail.rule_id)}</Code>
@@ -193,7 +193,7 @@ function DecisionCard({ e }: { e: MemoryEntry }) {
         <Verdict kind={d.won ? "buy" : "out"}>{d.won ? "Won" : "Lost"} round <Code>{text(d.round_id)}</Code></Verdict>
         <span className="flex items-center gap-2 text-[13px] text-muted">{when(e)} <OriginChip origin={e.origin} /></span>
       </div>
-      <p className="mt-2 text-[18px] font-medium text-balance">{e.summary}</p>
+      <p className="mt-3 text-[18px] font-medium leading-6 tracking-[-0.01em] text-balance">{e.summary}</p>
       <Reason e={e} reason={d.reason} />
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <Tag>seller {text(e.seller_id)}</Tag>
@@ -216,15 +216,15 @@ export function DecisionsView() {
   const lessonCount = decisions.filter((e) => e.kind === "lesson").length;
   const rows = selectMemory(decisions, kind, q).filter((e) => e.kind !== "lesson" || showLessons || kind === "lesson");
   return (
-    <div className="grid gap-3.5">
-      <div className="flex flex-wrap items-center gap-2">
-        <div role="group" aria-label="Show" className="flex gap-1">
+    <div className="grid gap-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <div role="group" aria-label="Show" className="flex gap-1 rounded-xl bg-surface p-1 shadow-ring">
           {FILTERS.map(([k, label]) => (
             <button
               key={k}
               aria-pressed={kind === k}
               onClick={() => setKind(k)}
-              className={`min-h-11 rounded-full px-4 text-[14px] font-medium ${kind === k ? "bg-accent-soft text-accent-2" : "text-muted hover:bg-soft hover:text-ink"}`}
+              className={`min-h-10 rounded-lg px-3.5 text-[14px] font-medium ${kind === k ? "bg-ink text-canvas" : "text-ink-2 hover:bg-surface-2 hover:text-ink"}`}
             >
               {label}
               <span className="ml-1.5 font-mono text-[12px] opacity-70">{k === "all" ? decisions.length : decisions.filter((e) => e.kind === k).length}</span>
@@ -234,7 +234,7 @@ export function DecisionsView() {
         <Search value={q} onChange={setQ} />
       </div>
       {kind !== "lesson" && lessonCount > 0 && (
-        <button type="button" aria-pressed={showLessons} onClick={() => setShowLessons((v) => !v)} className="min-h-11 justify-self-start rounded-lg border border-line px-4 text-[14px] font-medium text-muted hover:bg-soft hover:text-ink">
+        <button type="button" aria-pressed={showLessons} onClick={() => setShowLessons((v) => !v)} className="btn min-h-11 justify-self-start rounded-xl bg-surface px-4 text-[14px] font-medium text-ink-2 shadow-ring hover:bg-surface-2 hover:text-ink">
           {showLessons ? `Hide ${lessonCount} seller lessons` : `Show ${lessonCount} seller lessons`}
         </button>
       )}

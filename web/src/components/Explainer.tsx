@@ -31,7 +31,7 @@ const BEATS: { icon: ReactNode; title: string; text: string }[] = [
 export function HowItWorks() {
   return (
     <section aria-label="How it works">
-      <h2 className="text-center font-display text-[clamp(26px,3.4vw,38px)] font-normal">How the arena works</h2>
+      <h2 className="text-center font-display text-[clamp(26px,3.4vw,38px)] font-normal">How the market works</h2>
       <p className="mx-auto mt-2 max-w-[60ch] text-center text-[17px] text-ink-2">
         Five steps, every time. Nothing is paid until you say the word.
       </p>

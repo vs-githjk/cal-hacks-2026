@@ -10,15 +10,15 @@ import {
   type Created, type FieldError, type ListingRow, type OpenNeed, type SellForm, type ShopRow,
 } from "@/lib/sellerKit";
 
-const input = "min-h-11 w-full rounded-lg border border-line bg-panel px-3 py-2 text-[14px]";
-const button = "min-h-11 rounded-lg bg-accent px-4 py-2 font-medium text-accent-ink disabled:opacity-60";
+const input = "min-h-11 w-full rounded-xl border-0 bg-surface px-3.5 py-2 text-[16px] text-ink shadow-ring outline-none placeholder:text-muted/70 focus:shadow-[var(--shadow-ring),var(--shadow-focus)]";
+const button = "btn min-h-12 rounded-xl bg-pulse px-6 py-2 text-[15px] font-medium text-pulse-ink hover:shadow-card disabled:opacity-60";
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="block min-w-0">
-      <span className="mb-1 block text-[13px] font-medium">{label}</span>
+      <span className="mb-1.5 block text-[13px] font-medium text-ink-2">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-[12px] text-muted">{hint}</span>}
+      {hint && <span className="mt-1.5 block text-[12px] leading-4 text-muted">{hint}</span>}
     </label>
   );
 }
@@ -87,15 +87,25 @@ export default function SellPage() {
   };
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-4 px-4 py-6">
-      <header>
-        <h1 className="text-[22px] font-semibold">
-          Sell on {BRAND} <OriginChip origin="SIM" />
+    <div className="mx-auto grid w-full max-w-3xl grid-cols-[minmax(0,1fr)] gap-6 pt-2 md:pt-10">
+      <header className="grid gap-4">
+        <span className="inline-flex items-center gap-2 text-[15px] font-medium text-ink-2">
+          <span className="dot text-live" aria-hidden /> Seller Kit <OriginChip origin="SIM" />
+        </span>
+        <h1 className="text-[34px] font-medium leading-[38px] tracking-[-0.025em] text-balance md:text-[48px] md:leading-[52px]">
+          Sell on {BRAND}. <span className="text-muted">Your agent bids, never below your floor.</span>
         </h1>
-        <p className="mt-1 text-muted">
+        <p className="max-w-[60ch] text-[17px] leading-[26px] text-ink-2">
           Describe your shop once. The Seller Kit checks it and writes a config your own seller agent runs from. Everything here is a simulation:
           the kit cannot verify a real shop, so shops it writes are SIM.
         </p>
+        <ol className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {["Describe your shop", "Set a floor per condition", "Get your agent config", "Your agent bids sealed"].map((t, i) => (
+            <li key={t} className="flex items-center gap-2.5 rounded-xl bg-surface px-3 py-2.5 text-[13px] font-medium leading-[18px] shadow-ring">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-surface-2 font-mono text-[12px]">{i + 1}</span>{t}
+            </li>
+          ))}
+        </ol>
       </header>
 
       {kit.local ? (
@@ -170,7 +180,7 @@ export default function SellPage() {
           </p>
           <div className="grid gap-4">
             {form.rows.map((r, i) => (
-              <fieldset key={i} className="grid gap-3 rounded-lg border border-line p-3 sm:grid-cols-2">
+              <fieldset key={i} className="grid gap-4 rounded-xl border border-line bg-surface-2/60 p-4 sm:grid-cols-2">
                 <legend className="px-1 text-[12px] text-muted">Listing {i + 1}</legend>
                 <Field label="Part" hint="Lowercase, like: rtx 5070 ti or psu 750w">
                   <input className={input} value={r.sku} maxLength={80} required onChange={(e) => setRow(i, { sku: e.target.value })} />
@@ -209,7 +219,7 @@ export default function SellPage() {
           </div>
           <button
             type="button"
-            className="mt-3 min-h-11 rounded-lg border border-line px-4 py-2 text-[14px] font-medium"
+            className="btn mt-4 min-h-11 rounded-xl bg-surface px-4 py-2 text-[14px] font-medium text-ink shadow-ring hover:bg-surface-2"
             onClick={() => set("rows", [...form.rows, emptyRow()])}
           >
             Add a listing
