@@ -3,7 +3,8 @@
 
 export type StepKind = "plan" | "knockout" | "clash" | "swap" | "reallocate" | "pick" | "locked" | "blocked";
 export interface BuildStep { kind: StepKind; line: string; part?: string; with?: string[]; rule_id?: string }
-export interface BuildPick { seller: string; priceCents: number; name: string }
+/** origin: the listing's label (MIRROR or SIM) when the build came from the market feed. */
+export interface BuildPick { seller: string; priceCents: number; name: string; origin?: "LIVE" | "MIRROR" | "SIM" }
 export interface BuildResult {
   owned: Record<string, string>;
   status: "locked" | "blocked" | "open";
