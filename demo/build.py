@@ -1711,12 +1711,13 @@ def _buyer_client(args) -> Any:
     return Market(token_file=str(args.buyer_token or tokens / bridge.BUYER_TOKEN))
 
 
-def cartesia_for(buyer_id: str, env: dict, note: Callable[[str], None]) -> tuple[Any, str]:
+def cartesia_for(buyer_id: str, env: dict, note: Callable[[str], None], lookup: Optional[Callable[[str], Optional[str]]] = None) -> tuple[Any, str]:
     """(the Cartesia client for this buyer's approval phone, "") or (None, why): "no_phone" for a buyer with no number (the call is the only
-    approval, so a build above the allowance is denied), "not_configured" for a setup that is missing or wrong. One masked note either way."""
+    approval, so a build above the allowance is denied), "not_configured" for a setup that is missing or wrong. One masked note either way.
+    `lookup` reads a non-default buyer's own phone from the market's agent-only contact view (bridge.referee_phone_lookup)."""
     from pay import voice_cartesia as vc
     try:
-        client = vc.client_for_buyer(buyer_id, env)
+        client = vc.client_for_buyer(buyer_id, env, lookup=lookup)
     except vc.NoPhone as e:
         note(f"live call: {e}, so a build above the allowance is DENIED: no call, no mandate, nothing is paid")
         return None, "no_phone"
@@ -1837,7 +1838,7 @@ def main(argv: Optional[list] = None) -> int:
         from pay import voice_cartesia as vc
         env = vc.load_env(approver_env)
         buyer_name, secret = env.get(vc.NAME_ENV) or vc.DEFAULT_BUYER_NAME, env.get(vc.SECRET_ENV)
-        cartesia, no_call_reason = cartesia_for(args.buyer_id, env, out.note)
+        cartesia, no_call_reason = cartesia_for(args.buyer_id, env, out.note, lookup=bridge.referee_phone_lookup(args))
     else:
         out.note("No --live-call: a build above the allowance stops before any call. Nothing is paid.")
     target = bridge.live_target(args)

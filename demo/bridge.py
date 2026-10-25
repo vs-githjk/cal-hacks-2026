@@ -1013,6 +1013,30 @@ def main(argv: Optional[list] = None) -> int:
         return 1
 
 
+def referee_phone_lookup(args) -> Callable[[str], Optional[str]]:
+    """H3: a lookup of one buyer's own approval phone in the market's agent-only agent_buyer_contact view, read as the referee.
+    Lazy: nothing is opened until a buyer other than the default asks. No referee token on disk, or any failure, is None (the caller
+    then fails closed with NoPhone); it never mints an identity, and the number is never printed."""
+    from pay import voice_cartesia as vc
+    state: dict[str, Any] = {}
+
+    def sql(query: str) -> Any:
+        if "market" not in state:
+            try:
+                tokens = find_tokens_dir(getattr(args, "tokens_dir", None), live_target(args))
+            except SystemExit as e:   # a setup problem here is a missing phone (fail closed), not a crash of the approver
+                raise RuntimeError("market tokens unavailable") from e
+            token = tokens / REFEREE_TOKEN
+            if not token.exists():
+                raise RuntimeError("no referee token")
+            sys.path.insert(0, str(ROOT / "market" / "scripts"))
+            from stdb import Market   # reads SPACETIMEDB_HTTP and SPACETIMEDB_DB, exported by live_target
+            state["market"] = Market(token_file=str(token))
+        return state["market"].sql(query)
+
+    return vc.phone_lookup_from_sql(sql)
+
+
 def live_approver_for(args, run: dict, gate: DealGate, out) -> tuple[Callable[[Step], dict], str]:
     """The --live-call gate for this run, plus one console line saying where the call would go. A missing or bad Cartesia
     setup is not a crash: the gate denies at the approval beat (nothing is dialled, nothing is paid). The deal, the why-answer
@@ -1028,7 +1052,8 @@ def live_approver_for(args, run: dict, gate: DealGate, out) -> tuple[Callable[[S
             out.note(f"SCREEN CODE: {code}   (/buyer could not show it: {why_not}. Say it, then say approve)")
 
     try:
-        client = vc.client_for_buyer(getattr(args, "buyer_id", DB_BUYER_ID), env)   # #374: this buyer's own phone, never another buyer's
+        # #374 + H3: this buyer's own phone, never another buyer's (a web buyer's comes from the market's agent-only contact view)
+        client = vc.client_for_buyer(getattr(args, "buyer_id", DB_BUYER_ID), env, lookup=referee_phone_lookup(args))
         where = f"live call: ONE call to {vc.mask_number(client.approval_call_to)} at the approval beat (Cartesia configured)"
         unconfigured = None
     except vc.NoPhone as e:
