@@ -125,19 +125,19 @@ Public data: the CPSC recalls API and [docyx/pc-part-dataset](https://github.com
 
 <!-- VIDEO: fetch -->
 
-| Agent | Job | Agentverse address | Status |
-|---|---|---|---|
-| Fish Market Buyer (@techbazaarbuyer) | Takes goals in ASI:One, remembers owned parts, runs the sealed round, asks for approval before any payment | `agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8` | Registered |
-| Fish Market Quality Advocate (@techbazaaradvocate) | Checks fit, claims and recalls; at most 3 cited warnings; can veto the cheapest bid; never sees the fee | `agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05` | Registered |
-| Fish Market Smell Test (@techbazaarshield) | Chat front door to Smell Test screening; makes no purchases | `agent1q0m2z43cf3hg4cfy87hatf69ulyqkvuylm6mjv53e6y05weqmhjj6k4lknp` | Registered |
-| Byte Bros Outlet (@techbazaarseller1) | Seller that learns: a loss report's gap becomes a price step, never below its floor | `agent1qd3gvg54tsaezed0wzpgg34rza4y6kvvfd778nj6h27j20k99d38zd3et9m` | Registered |
-| FlashDeal Frankie (@techbazaarseller3) | Seller that lies: its bid says new, its page says open box, and the Advocate vetoes it (SIM, planted) | `agent1qdcrmqy2ra2tvshq2qhc8q5rvqzpr7du77st32qynwazy48gtuvyspdm26l` | Registered |
-| ReNew Refurb (@techbazaarseller5) | Seller that bundles refurbished and open-box lines, with the condition on every line | assigned when registered | Runs locally |
-| Central Comp MIRROR (seller_6) | Bids a real San Francisco store's dated listings for comparison; never ordered or paid | assigned when registered | Runs locally |
-| Fish Market Caller (@techbazaarcaller) | Places the one approval call for a mandate; approves and charges nothing itself | assigned when registered | Runs locally |
-| Market Pulse (@techbazaarpulse) | Answers price-trend and seller-record questions from Tiger Data, the CRS cache and finished rounds | assigned when registered | Runs locally |
+| Agent | Job | ASI:One handle | Agentverse address | Status |
+|---|---|---|---|---|
+| Fish Market Buyer | Takes goals in ASI:One, remembers owned parts, runs the sealed round, asks for approval before any payment | @techbazaarbuyer | `agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8` | Registered |
+| Fish Market Quality Advocate | Checks fit, claims and recalls; at most 3 cited warnings; can veto the cheapest bid; never sees the fee | @techbazaaradvocate | `agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05` | Registered |
+| Fish Market Smell Test | Chat front door to Smell Test screening; makes no purchases | @techbazaarshield | `agent1q0m2z43cf3hg4cfy87hatf69ulyqkvuylm6mjv53e6y05weqmhjj6k4lknp` | Registered |
+| Byte Bros Outlet | Seller that learns: a loss report's gap becomes a price step, never below its floor | @techbazaarseller1 | `agent1qd3gvg54tsaezed0wzpgg34rza4y6kvvfd778nj6h27j20k99d38zd3et9m` | Registered |
+| FlashDeal Frankie | Seller that lies: its bid says new, its page says open box, and the Advocate vetoes it (SIM, planted) | @techbazaarseller3 | `agent1qdcrmqy2ra2tvshq2qhc8q5rvqzpr7du77st32qynwazy48gtuvyspdm26l` | Registered |
+| ReNew Refurb | Seller that bundles refurbished and open-box lines, with the condition on every line | @techbazaarseller5 | assigned when registered | Runs locally |
+| Central Comp MIRROR | Bids a real San Francisco store's dated listings for comparison; never ordered or paid | none | assigned when registered | Runs locally |
+| Fish Market Caller | Places the one approval call for a mandate; approves and charges nothing itself | @techbazaarcaller | assigned when registered | Runs locally |
+| Market Pulse | Answers price-trend and seller-record questions from Tiger Data, the CRS cache and finished rounds | @techbazaarpulse | assigned when registered | Runs locally |
 
-Silicon Sally's Surplus (@techbazaarseller2, `agent1qw9dvuwgnh570wyk8uukp0w48a03tdpmtuv8csm3qxy6t3udl3ahs2264np`) stays registered but is retired: every seller now has one distinct job. The buyer includes the Payment Protocol, but a payment request in chat is refused on purpose: above the allowance, money moves only after the phone approval. Setup and profile checks: [agents/README.md](agents/README.md).
+Silicon Sally's Surplus (`agent1qw9dvuwgnh570wyk8uukp0w48a03tdpmtuv8csm3qxy6t3udl3ahs2264np`) stays registered but is retired: every seller now has one distinct job. The buyer includes the Payment Protocol, but a payment request in chat is refused on purpose: above the allowance, money moves only after the phone approval. The handles, the `tech-bazaar` database and one Actor URL keep the project's original name because they are live identifiers. Setup and profile checks: [agents/README.md](agents/README.md).
 
 <!-- VIDEO: cartesia -->
 
@@ -260,8 +260,6 @@ These live in code and tests, not in prompts.
 ## Team
 
 Vidyut Sriram, Abhinav Dasari, Vedant Shirvi, Anoop Ibrampur.
-
-Built at Cal Hacks 13.
 
 ## License
 
