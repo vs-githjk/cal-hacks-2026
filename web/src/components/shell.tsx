@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { STDB_DB, STDB_URI } from "@/lib/stdb";
-import { latestRound } from "@/lib/screens";
+import { latestRound, roundTitle } from "@/lib/screens";
 import { serviceStatuses, type ServiceStatus } from "@/lib/runMode";
 
 const NAV: { href: string; label: string; match?: string }[] = [
@@ -28,7 +28,7 @@ export function TopNav() {
   const conn = useSpacetimeDB();
   const live = conn.isActive;
   const r = latestRound(useTable(tables.round)[0]);
-  const status = !live ? "Offline" : r ? `Live, ${r.id} ${r.state === "closed" ? "closed" : "open"}` : "Live, no round yet";
+  const status = !live ? "Offline" : r ? `Live, ${roundTitle(r.id) ?? r.id} ${r.state === "closed" ? "closed" : "open"}` : "Live, no round yet";
   return (
     <header className="sticky top-0 z-40 bg-accent text-accent-ink">
       <div className="mx-auto flex max-w-[1200px] items-end gap-2 px-4 lg:px-8">
@@ -36,12 +36,13 @@ export function TopNav() {
           <Mark size={26} />
           <span className="hidden text-[16px] font-semibold text-accent-ink sm:inline">Tech Bazaar</span>
         </Link>
-        <nav aria-label="Main" className="min-w-0 flex-1 self-end overflow-x-auto [scrollbar-width:none]">
-          <ul className="flex items-end gap-1 pt-3">
+        <div className="relative min-w-0 flex-1 self-end">
+        <nav aria-label="Main" className="overflow-x-auto overscroll-x-contain [scrollbar-width:none]">
+          <ul className="flex snap-x items-end gap-1 pt-3">
             {NAV.map((n) => {
               const on = isOn(n);
               return (
-                <li key={n.href}>
+                <li key={n.href} className="snap-start">
                   <Link
                     href={n.href}
                     aria-current={on ? "page" : undefined}
@@ -54,6 +55,8 @@ export function TopNav() {
             })}
           </ul>
         </nav>
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-accent to-transparent sm:hidden" />
+        </div>
         <div className="ml-auto flex h-14 shrink-0 items-center gap-3 self-stretch text-[13px] text-accent-ink/85">
           <span className="hidden items-center gap-2 md:flex">
             <span className={`h-2 w-2 rounded-full ${live ? "bg-accent-ink" : "border border-accent-ink/70 bg-transparent"}`} aria-hidden />

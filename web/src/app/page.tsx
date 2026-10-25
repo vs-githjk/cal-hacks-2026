@@ -5,7 +5,7 @@ import { useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { OriginChip, Label, clock, money } from "@/components/ui";
 import { Question } from "@/components/arena";
-import { asOrigin, latestRound, recentRounds } from "@/lib/screens";
+import { asOrigin, latestRound, recentRounds, roundTitle } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
 const PARTS = ["GPU", "CPU", "Motherboard", "RAM", "SSD", "Cooler"];
@@ -71,7 +71,7 @@ export default function Home() {
               <li key={x.id} className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-4 py-2 text-[13.5px]">
                 <span className="tabular-nums text-muted">{clock(x.closedAt)}</span>
                 <span className="min-w-0 truncate">
-                  <span className="text-ink">{x.id}</span> <span className="text-muted">{x.bids} {x.bids === 1 ? "bid" : "bids"}</span> <OriginChip origin={x.origin} />
+                  <span className="text-ink">{roundTitle(x.id) ?? x.id}</span> <span className="text-muted">{x.bids} {x.bids === 1 ? "bid" : "bids"}</span> <OriginChip origin={x.origin} />
                 </span>
                 {x.winner ? (
                   <span className="whitespace-nowrap">
