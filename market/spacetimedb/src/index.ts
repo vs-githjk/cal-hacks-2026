@@ -14,6 +14,9 @@ export const assign_role = spacetimedb.reducer(
 export const pair_buyer_screen = spacetimedb.reducer({ buyerId: t.string(), code: t.string() }, (ctx, a) => {
   m.pairBuyerScreen(ctx, a);
 });
+export const sign_up_buyer = spacetimedb.reducer({ displayName: t.string(), phone: t.option(t.string()) }, (ctx, a) => {
+  m.signUpBuyer(ctx, { displayName: a.displayName, phone: a.phone ?? undefined });
+});
 export const reissue_pair_code = spacetimedb.reducer({ buyerId: t.string() }, (ctx, a) => m.reissuePairCode(ctx, a));
 export const pair_seller_screen = spacetimedb.reducer({ sellerId: t.string(), code: t.string() }, (ctx, a) => {
   m.pairSellerScreen(ctx, a);

@@ -14,4 +14,5 @@ export default __t.row({
   buyerId: __t.string().primaryKey().name("buyer_id"),
   displayName: __t.string().name("display_name"),
   origin: __t.string(),
+  phone: __t.string(),
 });

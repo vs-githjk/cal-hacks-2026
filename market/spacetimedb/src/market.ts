@@ -189,6 +189,44 @@ export function issuePairCode(ctx: Ctx, buyerId: string) {
   else ctx.db.pairCode.insert(fresh);
 }
 
+// ---------------------------------------------------------------- #374 open buyer sign-up
+
+export const SIGNUP_MAX = 30;
+export const SIGNUP_WINDOW_MS = 10 * 60 * 1000;
+const ID_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
+const PHONE_RE = /^\+?[0-9][0-9 ()-]{6,19}$/;
+
+/**
+ * Anyone without a role: becomes a new buyer b_<8> bound to the caller, with a $0 per-buy allowance
+ * (every deal needs their call). One sign-up per identity; 30 per 10 minutes across the market.
+ */
+export function signUpBuyer(ctx: Ctx, { displayName, phone }: { displayName: string; phone?: string }) {
+  const had = roleOf(ctx);
+  if (isOwner(ctx) || had) throw new SenderError(`already signed up: this identity is ${had ? `a ${had.role}` : 'the owner'}`);
+  const name = displayName.trim().slice(0, 60);
+  if (!name) throw new SenderError('display name required');
+  const ph = (phone ?? '').trim();
+  if (ph && !PHONE_RE.test(ph)) throw new SenderError('phone must be 7 to 20 digits, optionally starting with +');
+  const now = ms(ctx.timestamp);
+  const th = ctx.db.signupThrottle.id.find(0);
+  const fresh = !th || now - ms(th.windowStart) >= SIGNUP_WINDOW_MS;
+  if (!fresh && th.count >= SIGNUP_MAX) throw new SenderError('sign-ups are busy right now, try again in a few minutes');
+  const next = { id: 0, windowStart: fresh ? ctx.timestamp : th.windowStart, count: fresh ? 1 : th.count + 1 };
+  if (th) ctx.db.signupThrottle.id.update(next);
+  else ctx.db.signupThrottle.insert(next);
+  let buyerId = '';
+  do {
+    let raw = '';
+    for (let i = 0; i < 8; i++) raw += ID_CHARS[ctx.random.integerInRange(0, ID_CHARS.length - 1)];
+    buyerId = `b_${raw}`;
+  } while ([...ctx.db.role.subjectId.filter(buyerId)].length || ctx.db.buyerProfile.buyerId.find(buyerId) || ctx.db.allowance.buyerId.find(buyerId));
+  ctx.db.role.insert({ identity: ctx.sender, role: 'buyer', subjectId: buyerId });
+  ctx.db.buyerProfile.insert({ buyerId, displayName: name, origin: 'SIM', phone: ph.replace(/[ ()-]/g, '') });
+  ctx.db.allowance.insert(fromRule({ ...newAllowance(buyerId, now), per_purchase_limit: 0 }));
+  event(ctx, 'buyer_signed_up', 'buyer_profile', buyerId, 'A new buyer signed up');
+  return buyerId;
+}
+
 // ---------------------------------------------------------------- allowance (D's shape, rules/allowance)
 
 type AllowanceRow = NonNullable<ReturnType<Ctx['db']['allowance']['buyerId']['find']>>;
@@ -773,9 +811,12 @@ function myBuyerId(ctx: VCtx) {
   return r?.role === 'buyer' ? r.subjectId : undefined;
 }
 
+/** The caller's role row; the owner has none, so it gets a synthetic one (the /admin page gates on role owner or referee). */
 export function myRoleView(ctx: VCtx) {
   const r = roleOf(ctx);
-  return r ? [r] : [];
+  if (r) return [r];
+  const o = ctx.db.owner.id.find(0);
+  return o && o.identity.isEqual(ctx.sender) ? [{ identity: ctx.sender, role: 'owner', subjectId: '' }] : [];
 }
 
 export function myGoalsView(ctx: VCtx) {
@@ -924,8 +965,9 @@ export function setBuyerProfile(ctx: Ctx, { buyerId, displayName }: { buyerId: s
   requireRole(ctx, 'set_buyer_profile', ['referee', 'owner']);
   const name = displayName.trim();
   if (!name) throw new SenderError('display name required');
-  const row = { buyerId, displayName: name.slice(0, 60), origin: 'SIM' };
-  if (ctx.db.buyerProfile.buyerId.find(buyerId)) ctx.db.buyerProfile.buyerId.update(row);
+  const existing = ctx.db.buyerProfile.buyerId.find(buyerId);
+  const row = { buyerId, displayName: name.slice(0, 60), origin: 'SIM', phone: existing?.phone ?? '' };
+  if (existing) ctx.db.buyerProfile.buyerId.update(row);
   else ctx.db.buyerProfile.insert(row);
 }
 
