@@ -8,9 +8,9 @@ import { safeUrl } from "@/lib/url";
 export type Origin = "LIVE" | "MIRROR" | "SIM";
 
 const ORIGIN_STYLE: Record<Origin, string> = {
-  LIVE: "bg-mint/15 text-mint",
-  MIRROR: "bg-sky/15 text-sky",
-  SIM: "bg-soft text-muted ring-1 ring-inset ring-line-2",
+  LIVE: "bg-live-soft text-ink",
+  MIRROR: "bg-slate-soft text-slate",
+  SIM: "bg-amber-soft text-amber",
 };
 const ORIGIN_TITLE: Record<Origin, string> = {
   LIVE: "Made by a real outside party right now",
@@ -24,8 +24,9 @@ export function OriginChip({ origin, label }: { origin: string; label?: string }
   return (
     <span
       title={ORIGIN_TITLE[o]}
-      className={`inline-flex items-center whitespace-nowrap rounded px-1.5 py-px align-middle font-mono text-[10.5px] font-medium tracking-[0.04em] ${ORIGIN_STYLE[o]}`}
+      className={`inline-flex h-5 items-center gap-1.5 whitespace-nowrap rounded-full px-2 align-middle text-[12px]/[16px] font-medium tracking-[0.02em] ${ORIGIN_STYLE[o]}`}
     >
+      {o === "LIVE" && <span aria-hidden className="size-1.5 rounded-full bg-live" />}
       {label ?? o}
     </span>
   );
@@ -33,19 +34,19 @@ export function OriginChip({ origin, label }: { origin: string; label?: string }
 
 /** Condition or variant tag: new, open-box, retail. */
 export function Tag({ children }: { children: ReactNode }) {
-  return <span className="inline-flex items-center rounded-md bg-slate-soft px-1.5 py-0.5 text-[12px] font-semibold text-slate motion-safe:transition-transform motion-safe:duration-100 motion-safe:active:scale-95">{children}</span>;
+  return <span className="inline-flex items-center rounded-full bg-slate-soft px-2.5 py-0.5 text-[12px]/[16px] font-medium text-slate motion-safe:transition-transform motion-safe:duration-100 motion-safe:active:scale-95">{children}</span>;
 }
 
 /** tactile: hover lifts 2px with a deeper shadow, press scales to 0.99 (150 ms; none when motion is reduced). */
 export function Card({ children, className = "", stripe, hero, tactile }: { children: ReactNode; className?: string; stripe?: "coral" | "ink" | "amber" | "mint"; hero?: boolean; tactile?: boolean }) {
   const left = stripe ? ` border-l-4 ${{ coral: "border-l-coral", ink: "border-l-ink", amber: "border-l-amber", mint: "border-l-mint" }[stripe]}` : "";
-  const feel = tactile ? " motion-safe:transition-[transform,box-shadow] motion-safe:duration-150 motion-safe:ease-out motion-safe:hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(233,185,73,0.08)] motion-safe:active:scale-[0.99]" : "";
-  return <section data-hero={hero || undefined} className={`card min-w-0 p-[18px]${left}${feel} ${className}`}>{children}</section>;
+  const feel = tactile ? " motion-safe:transition-[transform,box-shadow] motion-safe:duration-150 motion-safe:ease-out motion-safe:hover:-translate-y-0.5 hover:shadow-lift motion-safe:active:scale-[0.99]" : "";
+  return <section data-hero={hero || undefined} className={`card min-w-0 p-4 md:p-6${left}${feel} ${className}`}>{children}</section>;
 }
 
 /** Small uppercase section label. Headings inside cards are this, never a big heading; the big thing is the number. */
 export function Label({ children }: { children: ReactNode }) {
-  return <h2 className="mb-3 text-[15px] font-semibold text-ink">{children}</h2>;
+  return <h2 className="mb-3 text-[12px]/[16px] font-medium uppercase tracking-[0.04em] text-muted">{children}</h2>;
 }
 
 export const README_URL = "https://github.com/vs-githjk/cal-hacks-2026#readme";
@@ -69,7 +70,7 @@ export function RunsLocally({ what, children }: { what: string; children: ReactN
 /** The banner over a recorded snapshot on the hosted site (#398): SIM, when it was captured, and where the live version runs. */
 export function RecordedBanner({ at }: { at: string }) {
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[10px] border border-line bg-panel px-3 py-2.5 text-[13px] text-ink-2">
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-surface-2 px-3 py-2.5 text-[13px]/[18px] text-ink-2">
       <OriginChip origin="SIM" />
       <span>{recordedLine(at)}</span>
       <a className="font-medium underline underline-offset-2" href={README_URL} target="_blank" rel="noreferrer">
@@ -91,10 +92,10 @@ export function Unavailable({ title, children }: { title: string; children: Reac
 }
 
 export function Pill({ tone, children }: { tone: "done" | "hold" | "hunting"; children: ReactNode }) {
-  const t = { done: "bg-mint-soft text-mint", hold: "bg-amber-soft text-amber", hunting: "bg-sky-soft text-sky" }[tone];
+  const t = { done: "bg-mint-soft text-mint", hold: "bg-amber-soft text-amber", hunting: "bg-live-soft text-ink" }[tone];
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-medium ${t}`}>
-      <span className="h-[7px] w-[7px] rounded-full bg-current" aria-hidden />
+    <span className={`inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[12px]/[16px] font-medium ${t}`}>
+      <span className={`size-2 rounded-full ${tone === "hunting" ? "bg-live" : "bg-current"}`} aria-hidden />
       {children}
     </span>
   );
@@ -102,9 +103,9 @@ export function Pill({ tone, children }: { tone: "done" | "hold" | "hunting"; ch
 
 export function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="min-w-0 rounded-xl bg-soft px-3 py-2.5">
+    <div className="min-w-0 rounded-xl bg-surface-2 px-3 py-2.5">
       <dt className="text-[12px] text-muted">{label}</dt>
-      <dd className="mt-0.5 text-[20px] font-semibold tracking-[-0.01em] tabular-nums">{value}</dd>
+      <dd className="mt-0.5 font-mono text-[20px]/[26px] font-medium tabular-nums">{value}</dd>
       {sub && <dd className="text-[12px] font-medium text-muted">{sub}</dd>}
     </div>
   );
@@ -123,7 +124,7 @@ export function Verdict({ kind, children }: { kind: VerdictKind; children: React
 }
 
 export function Code({ children }: { children: ReactNode }) {
-  return <code className="rounded-md bg-soft px-1.5 py-px font-mono text-[12px]">{children}</code>;
+  return <code className="rounded-md bg-surface-2 px-1.5 py-px font-mono text-[12px]">{children}</code>;
 }
 
 /** Source link: always visible, always the real host. */
@@ -131,7 +132,7 @@ export function SourceLink({ href, children }: { href: string; children?: ReactN
   const text = children ?? href.replace(/^https?:\/\//, "").slice(0, 60);
   if (!safeUrl(href)) return <span className="break-all text-[13px] text-muted">{text || "no source"}</span>;
   return (
-    <a href={href} target="_blank" rel="noreferrer" className="break-all border-b border-current text-[13px] text-sky no-underline">
+    <a href={href} target="_blank" rel="noreferrer" className="break-all border-b border-current text-[13px] text-pulse no-underline">
       {text}
     </a>
   );
@@ -142,7 +143,7 @@ export function SampleOnly({ on, children }: { on: boolean; children: ReactNode 
   if (!on) return <>{children}</>;
   return (
     <div className="relative min-w-0">
-      <span className="absolute -top-2.5 right-3 z-10 rounded-md bg-panel"><OriginChip origin="SIM" label="SIM sample, not this market" /></span>
+      <span className="absolute -top-2.5 right-3 z-10 rounded-md bg-surface"><OriginChip origin="SIM" label="SIM sample, not this market" /></span>
       {children}
     </div>
   );

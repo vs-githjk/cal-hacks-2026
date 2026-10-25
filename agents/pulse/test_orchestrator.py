@@ -597,7 +597,7 @@ def test_chat_acknowledges_then_answers_when_shield_allows(tmp_path, monkeypatch
 def test_chat_answers_nothing_but_a_block_notice_when_shield_blocks(tmp_path, monkeypatch):
     pytest.importorskip("uagents")
     sent = _run_chat(tmp_path, monkeypatch, "block", "how is the RTX 5070 Ti trending?")
-    assert sent[1][1].text() == "Shield blocked this message. No action taken."
+    assert sent[1][1].text() == "Smell Test blocked this message. No action taken."
 
 
 # ---- origin labels of a real Tiger read: the rows' origin, or "no data", never a blanket SIM ----------------------

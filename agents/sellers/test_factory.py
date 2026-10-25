@@ -190,7 +190,7 @@ def test_schema_file_is_a_valid_json_schema_and_accepts_good():
                                  "seller_1_agent", "seller-1-agent", "seller_5_agent", "buyer_agent",
                                  "advocate_agent", "shield_agent", "shield-agent"])
 def test_reserved_agent_ids_are_refused(sid):
-    err = refused(dict(good(), id=sid), "id", "reserved for a Tech Bazaar agent")
+    err = refused(dict(good(), id=sid), "id", "reserved for a Fish Market agent")
     assert [e["field"] for e in err.errors] == ["id"]
 
 
@@ -212,7 +212,7 @@ def test_hyphen_ids_never_read_a_built_in_sellers_seed(sid, monkeypatch):
     before = dict(common.SEEDS)
     with pytest.raises(ConfigError):
         seller_from_config(dict(good(), id=sid))
-    with pytest.raises(ValueError, match="already a Tech Bazaar agent"):
+    with pytest.raises(ValueError, match="already a Fish Market agent"):
         common.register_custom_seller(sid)
     assert common.SEEDS == before
 
@@ -226,7 +226,7 @@ def test_catalog_sellers_may_use_their_reserved_ids():
 @pytest.mark.parametrize("role", ["buyer", "advocate", "shield", "seller_1", "seller_4"])
 def test_register_custom_seller_refuses_an_existing_agent_role(role):
     before = common.SEEDS[role]
-    with pytest.raises(ValueError, match="already a Tech Bazaar agent"):
+    with pytest.raises(ValueError, match="already a Fish Market agent"):
         common.register_custom_seller(role)
     assert common.SEEDS[role] == before
 

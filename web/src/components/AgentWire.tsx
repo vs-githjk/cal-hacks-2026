@@ -44,21 +44,21 @@ export function AgentWire() {
 
   const node = (x: number, y: number, w: number, name: string, sub: string, hub = false) => (
     <g>
-      <rect x={x} y={y} width={w} height={60} rx={12} className={`fill-canvas ${hub ? "stroke-ink" : "stroke-line-2"}`} strokeWidth={hub ? 1.5 : 1} />
+      <rect x={x} y={y} width={w} height={60} rx={12} className={`fill-surface-2 ${hub ? "stroke-pulse" : "stroke-line-2"}`} strokeWidth={hub ? 1.5 : 1} />
       <text x={x + w / 2} y={y + 27} textAnchor="middle" className="fill-ink text-[13px] font-semibold">{name}</text>
       <text x={x + w / 2} y={y + 45} textAnchor="middle" className="fill-muted font-mono text-[10.5px]">{sub}</text>
     </g>
   );
 
   return (
-    <div className="min-w-0 rounded-2xl border border-line bg-panel">
+    <div className="min-w-0 rounded-2xl border border-line bg-surface shadow-card">
       <div className="overflow-x-auto">
         <svg viewBox="0 0 760 240" className="block h-auto w-full min-w-[640px]" role="img" aria-label="Seller agents send bids through Shield to the buyer, which asks the advocate. A line lights when an agent message arrives.">
           {(Object.keys(EDGES) as EdgeId[]).map((id) => (
-            <path key={id} d={EDGES[id].d} fill="none" strokeWidth={1.5} className={`transition-colors motion-reduce:transition-none ${lit?.edge === id ? "stroke-ink" : "stroke-line-2"}`} />
+            <path key={id} d={EDGES[id].d} fill="none" strokeWidth={1.5} className={`transition-colors motion-reduce:transition-none ${lit?.edge === id ? "stroke-pulse" : "stroke-line-2"}`} />
           ))}
           {lit && !still && (
-            <circle key={String(lit.key)} r={5} className="fill-ink">
+            <circle key={String(lit.key)} r={5} className="fill-pulse">
               <animateMotion dur="1.2s" repeatCount="1" path={EDGES[lit.edge].d} />
             </circle>
           )}

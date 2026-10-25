@@ -1,8 +1,8 @@
-"""shield.impersonation: a sender claiming to be the buyer, the advocate or Tech Bazaar itself."""
+"""shield.impersonation: a sender claiming to be the buyer, the advocate or Fish Market itself (Tech Bazaar, the old name, stays blocked)."""
 from shield.rules.base import BLOCK, QUARANTINE, Rule, rx
 
 _ROLES = {
-    "marketplace": r"(?:tech\s*bazaar|bazaar\s*shield|the\s+marketplace\s+(?:admin|operator|support)|marketplace\s+(?:admin|operator|support)|shield)",
+    "marketplace": r"(?:fish\s*market|smell\s*test|tech\s*bazaar|bazaar\s*shield|the\s+marketplace\s+(?:admin|operator|support)|marketplace\s+(?:admin|operator|support)|shield)",
     "advocate": r"(?:the\s+|your\s+)?advocate",
     "buyer": r"(?:the\s+buyer'?s?\s+agent|the\s+buyer|your\s+buyer|your\s+owner|your\s+agent|the\s+owner)",
 }
@@ -18,7 +18,7 @@ _FORM = (r"(?:\s{0,3}\]?\s{0,3}(?:'s)?\s{0,3}(?:verdict|says|said|report|decisio
 _VERDICT = r"(?:recommend\w*|buy|approv\w*|allow\w*|pass(?:ed)?|accept\w*|veto\w*|wins?|winner|won|clear(?:ed)?|ok)"
 OUTPUT = {
     "advocate": rx(r"(?:\[\s{0,3})?\b(?:the\s+|your\s+)?advocate" + _FORM + r"[^.!?\n]{0,40}?\b" + _VERDICT + r"\b"),
-    "marketplace": rx(r"(?:\[\s{0,3})?\b(?:referee|tech\s{0,3}bazaar|bazaar\s{0,3}shield)" + _FORM + r"[^.!?\n]{0,40}?\b" + _VERDICT + r"\b"
+    "marketplace": rx(r"(?:\[\s{0,3})?\b(?:referee|fish\s{0,3}market|smell\s{0,3}test|tech\s{0,3}bazaar|bazaar\s{0,3}shield)" + _FORM + r"[^.!?\n]{0,40}?\b" + _VERDICT + r"\b"
                       r"|(?:^|\n)[ \t]{0,20}shield[ \t]{0,3}(?:verdict|check|result)?[ \t]{0,3}[:\-][ \t]{0,3}"
                       r"(?:allow\w*|pass(?:ed)?|approv\w*|ok|clear\w*)\b"),
 }
@@ -33,7 +33,7 @@ def check(doc, ctx):
 
 
 RULE = Rule("shield.impersonation", BLOCK, "high",
-            "sender claims a role it does not hold (buyer, advocate, Tech Bazaar)", check, fold=True)
+            "sender claims a role it does not hold (buyer, advocate, Fish Market)", check, fold=True)
 
 
 def check_output(doc, ctx):
@@ -46,4 +46,4 @@ def check_output(doc, ctx):
 
 
 OUTPUT_RULE = Rule("shield.impersonation.output", QUARANTINE, "high",
-                   "text dressed as the advocate's, referee's or Tech Bazaar's own verdict", check_output, fold=True)
+                   "text dressed as the advocate's, referee's or Fish Market's own verdict", check_output, fold=True)

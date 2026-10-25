@@ -239,13 +239,13 @@ def register_custom_seller(role: str) -> None:
     """Give a custom seller (from the Seller Kit) a stable seed so its address survives restarts.
     Set <ROLE>_AGENT_SEED in agents/.env before putting it on Agentverse; the default is public."""
     if role in SEEDS:
-        raise ValueError(f"{role!r} is already a Tech Bazaar agent: a custom seller must not reuse its key")
+        raise ValueError(f"{role!r} is already a Fish Market agent: a custom seller must not reuse its key")
     env = role.upper().replace("-", "_")
     # Both env names a role reads are checked against every name a built-in reads: 'seller-1' and 'seller_1_agent'
     # both land on SELLER_1_AGENT_SEED, 'buyer_agent' on BUYER_AGENT_SEED, so none may reuse a built-in's key.
     owned = {f"{built_in.upper()}{suffix}" for built_in in BUILT_IN_ROLES for suffix in ("_AGENT_SEED", "_SEED")}
     if {f"{env}_AGENT_SEED", f"{env}_SEED"} & owned:
-        raise ValueError(f"{role!r} is already a Tech Bazaar agent: its seed name {env}_AGENT_SEED belongs to a "
+        raise ValueError(f"{role!r} is already a Fish Market agent: its seed name {env}_AGENT_SEED belongs to a "
                          "built-in agent, a custom seller must not reuse its key")
     if _CUSTOM_ENVS.get(env, role) != role:
         raise ValueError(f"{role!r} and {_CUSTOM_ENVS[env]!r} map to the same seed name {env}_AGENT_SEED")
@@ -312,7 +312,7 @@ def include_profile_chat(agent, role_text: str):
     async def on_chat(ctx, sender: str, msg: ChatMessage):
         verdict = screen(str(msg.msg_id), sender, msg.text())
         await ctx.send(sender, ChatAcknowledgement(acknowledged_msg_id=msg.msg_id))
-        text = role_text if verdict.get("verdict") == "allow" else "Shield blocked this message. No action taken."
+        text = role_text if verdict.get("verdict") == "allow" else "Smell Test blocked this message. No action taken."
         await ctx.send(sender, ChatMessage(content=[TextContent(text=text)]))
 
     @chat.on_message(ChatAcknowledgement)

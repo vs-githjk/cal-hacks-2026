@@ -607,7 +607,7 @@ def cmd_up(a, repo: Path = REPO) -> int:
     file_env, env_note = load_env_file(Path(a.env_file).expanduser())
     secrets = dict(file_env)
 
-    print(f"Tech Bazaar launcher, repo {repo}\n\nPreflight:")
+    print(f"Fish Market launcher, repo {repo}\n\nPreflight:")
     owned = {r["port"] for r in live.values() if r.get("port")}
     checks = run_preflight(a, services, file_env, env_note, repo=repo, owned_ports=owned)
     print_preflight(checks)
@@ -752,7 +752,7 @@ def cmd_down(a) -> int:
 
 
 def make_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="launch.py", description="Bring Tech Bazaar up locally and say what is really up.",
+    p = argparse.ArgumentParser(prog="launch.py", description="Bring Fish Market up locally and say what is really up.",
                                 epilog="The agent ports (sellers 8010, advocate 8003, buyer 8001) are fixed in agents/ code and have no flag.")
     p.add_argument("command", choices=["up", "status", "down"])
     p.add_argument("--env-file", default=str(DEFAULT_ENV_FILE), help="KEY=VALUE file loaded into child environments only (default: %(default)s)")

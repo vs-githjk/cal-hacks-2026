@@ -15,7 +15,7 @@
 
 Every match carries the **recall page on cpsc.gov**, the date, the **hazard**, the **remedy** (refund, repair or replacement) and how many **units** were recalled.
 
-Built for **AI shopping agents**. Our own, [Tech Bazaar](https://github.com/vs-githjk/cal-hacks-2026), vetoes a recalled product before any money moves. It's also useful to resellers, refurbishers, marketplaces checking listings, and anyone buying second-hand electronics.
+Built for **AI shopping agents**. Our own, [Fish Market](https://github.com/vs-githjk/cal-hacks-2026), vetoes a recalled product before any money moves. It's also useful to resellers, refurbishers, marketplaces checking listings, and anyone buying second-hand electronics.
 
 ## Real example (the default input)
 

@@ -210,7 +210,7 @@ def test_shield_blocked_review_retries(buyer, monkeypatch):
     ctx = Context()
     asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(cards_json=json.dumps([card()]))))
     assert buyer.ROUND['phase'] == 'waiting'
-    assert 'Shield' in ctx.owner_text() and 'Nothing ordered' in ctx.owner_text()
+    assert 'Smell Test' in ctx.owner_text() and 'Nothing ordered' in ctx.owner_text()
 
 
 def test_missing_card_in_multi_bid_round_retries(buyer):

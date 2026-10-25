@@ -38,7 +38,7 @@ _SUMMARY_BLOCKED = frozenset({
 # Item and seller text read aloud also must not steer the buyer (#197): "you already agreed to this", "official reseller".
 _FACTS_BLOCKED = _SUMMARY_BLOCKED | frozenset({
     "you", "your", "yours", "agreed", "agree", "already", "official", "officially", "authorized", "authorised",
-    "verified", "certified", "trusted", "guaranteed", "confirmed", "promised", "advocate", "shield", "bazaar", "buyer",
+    "verified", "certified", "trusted", "guaranteed", "confirmed", "promised", "advocate", "shield", "bazaar", "fishmarket", "smelltest", "buyer",
     "referee", "now", "urgent",
 })
 

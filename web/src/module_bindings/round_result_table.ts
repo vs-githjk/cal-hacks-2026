@@ -30,4 +30,6 @@ export default __t.row({
   source: __t.string(),
   adjustedTotal: __t.f64().name("adjusted_total"),
   adjustmentReason: __t.string().name("adjustment_reason"),
+  stage: __t.u32(),
+  status: __t.string(),
 });

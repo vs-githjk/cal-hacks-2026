@@ -43,7 +43,7 @@ WEB = "web"  # owner id for the local web chat (web_chat.py); its replies queue 
 
 # Agentverse profile, published on connect (README, short description, handle) for ASI:One discovery.
 agent = Agent(**common.agent_args(
-    "buyer", 8001, name="Tech Bazaar Buyer",
+    "buyer", 8001, name="Fish Market Buyer",
     readme_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "AGENTVERSE.md"),
     description="Your buying agent for computer gear: give it a goal, it skips parts you own, makes seller agents "
                 "bid in a sealed round, vetoes traps with a cited source, and pays only after you approve.",
@@ -768,7 +768,7 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
     except Exception as exc:
         ctx.logger.warning(f"invalid bid dropped: {type(exc).__name__}")
         if reasons:  # Shield's verdict still reaches the owner even when the payload is not a valid Bid
-            await tell_owner(ctx, f"Shield blocked a bid from {SELLER_ADDRS[sender]}: {reasons}")
+            await tell_owner(ctx, f"Smell Test blocked a bid from {SELLER_ADDRS[sender]}: {reasons}")
         return
     if bid["need_id"] != ROUND["need"]["id"]:
         return
@@ -786,7 +786,7 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
         "origin": bid["origin"],
     }
     if reasons:
-        await tell_owner(ctx, f"Shield blocked a bid from {SELLER_ADDRS[sender]}: {reasons}")
+        await tell_owner(ctx, f"Smell Test blocked a bid from {SELLER_ADDRS[sender]}: {reasons}")
         return
     if ROUND["phase"] == "requote":
         await on_requote(ctx, bid)
@@ -824,7 +824,7 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceReply):
         except Exception:
             cards = None
     if reasons:
-        await fail_round(ctx, f"Shield blocked the advocate's reply: {reasons}. Nothing ordered.", always_notify=True)
+        await fail_round(ctx, f"Smell Test blocked the advocate's reply: {reasons}. Nothing ordered.", always_notify=True)
         return
     try:
         if not isinstance(raw, list):
@@ -1200,7 +1200,7 @@ async def _delegated_approval(ctx: Context, transaction: dict, send_private, dir
     result = await _phone_approval(transaction, send_private, delegated, service, buyer_name)
     if result.approved or not (delegated.transport_failed or delegated.refused):
         return result
-    ctx.logger.warning("Bazaar Caller did not deliver a usable call; placing the approval call directly")
+    ctx.logger.warning("Fish Market Caller did not deliver a usable call; placing the approval call directly")
     return await _phone_approval(transaction, send_private, direct_client, service, buyer_name)
 
 

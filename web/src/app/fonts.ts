@@ -1,6 +1,5 @@
 // web/src/app/fonts.ts
-// Design system v2: Geist only (400, 500, 600) and Geist Mono (400, 500) for prices, codes and timestamps.
-// Both are Google Fonts (SIL Open Font License 1.1). next/font downloads at build time; no runtime request.
+// Design system v2: Geist for everything, Geist Mono for prices, codes and timestamps (both SIL OFL 1.1, via next/font).
 import { Geist, Geist_Mono } from "next/font/google";
 
 export const geist = Geist({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-geist", display: "swap" });

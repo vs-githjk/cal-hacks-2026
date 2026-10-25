@@ -20,7 +20,7 @@ from caller import relay  # noqa: E402
 from caller.relay import market_has_typed_approval  # noqa: E402
 
 common.SEEDS.setdefault("caller", os.getenv("CALLER_AGENT_SEED") or "tech-bazaar-caller-dev")
-NAME = "Bazaar Caller"
+NAME = "Fish Market Caller"
 
 
 class CallRequest(Model):
@@ -54,7 +54,7 @@ def screen_sink():
 agent = Agent(**common.agent_args(
     "caller", 8006, name=NAME, handle=os.getenv("CALLER_AGENT_HANDLE", "techbazaarcaller"),
     readme_path=str(Path(__file__).with_name("AGENTVERSE.md")),
-    description="Places the one approval phone call for a Tech Bazaar purchase: the buyer says the code on their screen "
+    description="Places the one approval phone call for a Fish Market purchase: the buyer says the code on their screen "
                 "and approve. It approves and charges nothing itself."))
 protocol = Protocol(name="tech-bazaar-approval-call", version="0.1.0")
 SEEN: set = set()
@@ -130,7 +130,7 @@ async def on_transport(ctx: Context, sender: str, msg: common.VoiceTransportRequ
 
 
 agent.include(protocol, publish_manifest=True)
-common.include_profile_chat(agent, "I am Bazaar Caller, Tech Bazaar's approval-call agent. I place one phone call when the buyer "
+common.include_profile_chat(agent, "I am Fish Market Caller, Fish Market's approval-call agent. I place one phone call when the buyer "
                             "agent asks me to confirm a purchase, and I only take structured requests from it. I cannot approve "
                             "or charge anything from this chat. Send buying goals to @techbazaarbuyer.")
 

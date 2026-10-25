@@ -361,3 +361,23 @@ def test_the_lows_lowercase_sizes_comma_sockets_and_tiny_tdp():
 def test_a_memory_type_and_form_are_still_read_in_any_case():
     r = check_build({"motherboard": {"name": "Asus PRIME B650-PLUS WIFI"}, "memory": {"name": "m", "type": "ddr5", "form": "dimm"}})
     assert by_rule(r)["fit.ram_type"]["verdict"] == "pass" and by_rule(r)["fit.ram_form"]["verdict"] == "pass"
+
+
+def test_the_bundled_actor_code_runs_on_its_own(tmp_path):  # Store build 0.1.7 shipped without part_specs and failed on import
+    import shutil
+    import subprocess
+    root = tmp_path / "fit_checker" / "actor"
+    shutil.copytree(ACTOR.parent, tmp_path / "fit_checker", ignore=shutil.ignore_patterns("data", "__pycache__", "tests"))
+    subprocess.run(["sh", str(root / "bundle.sh")], check=True, cwd=root)
+    code = (f"import sys; sys.path.insert(0, {str(root)!r}); "
+            "from src.data.fit_checker.build_check import check_build; "
+            "r = check_build({'cpu': {'name': 'AMD Ryzen 7 7800X3D'}, 'motherboard': {'name': 'Asus PRIME B650-PLUS WIFI'}}); "
+            "print(len(r['checks']) > 0)")
+    out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True, cwd=tmp_path)
+    assert out.stdout.strip() == "True", out.stderr
+
+
+def test_apify_push_uploads_the_git_ignored_bundle():  # .gitignore lists src/data/, so apify push needs .actorignore to keep it
+    assert "src/data/" in (ACTOR / ".gitignore").read_text().split()
+    lines = [ln.strip() for ln in (ACTOR / ".actorignore").read_text().splitlines()]
+    assert "!src/data/**/*.py" in lines and "!src/data/**/*.json" in lines and "src/data/" not in lines

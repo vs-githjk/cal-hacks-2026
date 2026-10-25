@@ -1,236 +1,249 @@
-/* Fish Market design tokens: design system v2 (docs/design-system/tokens.css), light first.
-   Tailwind v4: the @theme inline block turns every token into a utility (bg-surface, text-muted, border-line, shadow-card, ...).
-   v2 values come from BetterBill (ink, pulse, semantic pairs, radius, shadows) and Prism (canvas, glass, live cyan, type).
-   One brand accent on top: koi, for the mark and brand moments only, never for a state. */
+/* Fish Market design system v2 (docs/design-system/handoff.md). Cool canvas, one action colour (pulse), Geist + Geist Mono.
+   Every colored state also says its word (LIVE, MIRROR, SIM, WON, VETOED); hue never carries meaning alone. */
 @import "tailwindcss";
 
-:root {
-  --canvas: #eef3f8;
-  --surface: #ffffff;
-  --surface-2: #f4f6fa;
-  --glass: #ffffffcc;
-  --ink: #0b1b2b;
-  --ink-2: #2a3440;
-  --muted: #5b6b7c;
-  --line: #e3e8ef;
-  --line-2: #0b1b2b24;
-  --pulse: #1e4ed8;
-  --pulse-ink: #ffffff;
-  --pulse-soft: #eef2ff;
-  --pulse-soft-ink: #1e3a8a;
-  --live: #0891b2;
-  --live-soft: #0891b224;
-  --mint: #065f46;
-  --mint-mark: #0f9d76;
-  --mint-soft: #d1fae5;
-  --coral: #b4232a;
-  --coral-mark: #e5484d;
-  --coral-soft: #fdecec;
-  --amber: #92400e;
-  --amber-soft: #fef3c7;
-  --slate: #334155;
-  --slate-soft: #eef2f6;
-  --referee: #1e3a8a;
-  --referee-soft: #eef2ff;
-  --koi: #ff7a45;
-  --koi-soft: #fff1ea;
-  --floor-bg: #0b1b2b;
-  --floor-ground: #112437;
-  --floor-line: #eef3f8;
-  --floor-rope: #5b6b7c;
-  --pac: #eef3f8;
-  --ghost-1: #8fa0b2;
-  --ghost-2: #e5484d;
-  --ghost-3: #fcd34d;
-  --ghost-4: #0f9d76;
-  --ghost-eaten: #334155;
-  --shield: #22d3ee;
-  --checker: #0f9d76;
+@theme {
+  --color-canvas: #eef3f8;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f6fa;
+  --color-glass: #ffffffcc;
+  --color-ink: #0b1b2b;
+  --color-ink-2: #2a3440;
+  --color-muted: #5b6b7c;
+  --color-line: #e3e8ef;
+  --color-line-2: #0b1b2b24;
+  --color-pulse: #1e4ed8;
+  --color-pulse-ink: #ffffff;
+  --color-pulse-soft: #eef2ff;
+  --color-pulse-soft-ink: #1e3a8a;
+  --color-live: #0891b2;
+  --color-live-soft: #0891b224;
+  --color-mint: #065f46;
+  --color-mint-mark: #0f9d76;
+  --color-mint-soft: #d1fae5;
+  --color-coral: #b4232a;
+  --color-coral-mark: #e5484d;
+  --color-coral-soft: #fdecec;
+  --color-amber: #92400e;
+  --color-amber-soft: #fef3c7;
+  --color-slate: #334155;
+  --color-slate-soft: #eef2f6;
+  --color-referee: #1e3a8a;
+  --color-referee-soft: #eef2ff;
+  --color-floor-bg: #0b1b2b;
+  --color-floor-ground: #112437;
+  --color-floor-line: #eef3f8;
+  --color-floor-rope: #5b6b7c;
+  --color-pac: #eef3f8;
+  --color-ghost-1: #8fa0b2;
+  --color-ghost-2: #e5484d;
+  --color-ghost-3: #fcd34d;
+  --color-ghost-4: #0f9d76;
+  --color-ghost-eaten: #334155;
+  --color-shield: #22d3ee;
+  --color-checker: #0f9d76;
+  --color-tag-bg: #eef3f8;
+  --color-tag-ink: #0b1b2b;
+  /* The one Fish Market brand accent (koi): the mark's eye and brand moments only, never a state. */
+  --color-koi: #ff7a45;
+  --color-koi-soft: #fff1ea;
   --shadow-ring: 0 0 0 1.5px #0b1b2b24, 0 1px 2px #0b1b2b14;
   --shadow-card: 0 1px 2px #0b1b2b0f, 0 8px 24px #0b1b2b0f;
   --shadow-lift: 0 24px 60px #0b1b2b2e;
   --shadow-glass: inset 0 0.5px 0 #fffffff2, 0 0 0 0.5px #0e172614, 0 4px 40px 8px #0e172629, 0 34px 70px -34px #0e172642;
   --shadow-focus: 0 0 0 4px #1e4ed833;
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --radius: 16px;
-  color-scheme: light;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --container: 1120px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+  --font-sans: var(--font-geist), "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, Menlo, monospace;
+}
+
+/* Legacy token names other screens still use, mapped to the closest v2 value. */
+@theme inline {
+  --color-canvas-2: var(--color-surface-2);
+  --color-panel: var(--color-surface);
+  --color-soft: var(--color-surface-2);
+  --color-accent: var(--color-pulse);
+  --color-accent-2: var(--color-pulse-soft-ink);
+  --color-accent-ink: var(--color-pulse-ink);
+  --color-accent-soft: var(--color-pulse-soft);
+  --color-flare: var(--color-coral);
+  --color-flare-soft: var(--color-coral-soft);
+  --color-sky: var(--color-slate);
+  --color-sky-soft: var(--color-slate-soft);
+  --color-royal: var(--color-referee);
+  --color-royal-soft: var(--color-referee-soft);
+  --radius-card: var(--radius-lg);
+  --font-display: var(--font-geist), "Geist", ui-sans-serif, system-ui, sans-serif;
 }
 
 [data-theme="dark"] {
-  --canvas: #0b1b2b;
-  --surface: #112437;
-  --surface-2: #16304a;
-  --glass: #112437cc;
-  --ink: #eef3f8;
-  --ink-2: #c5d0dc;
-  --muted: #8fa0b2;
-  --line: #1f3a55;
-  --line-2: #eef3f833;
-  --pulse: #8fb0ff;
-  --pulse-ink: #0b1b2b;
-  --pulse-soft: #1e4ed838;
-  --pulse-soft-ink: #c7d4ff;
-  --live: #22d3ee;
-  --live-soft: #22d3ee29;
-  --mint: #6ee7b7;
-  --mint-soft: #0f9d7633;
-  --coral: #fca5a5;
-  --coral-soft: #e5484d33;
-  --amber: #fcd34d;
-  --amber-soft: #92400e4d;
-  --slate: #cbd5e1;
-  --slate-soft: #33415566;
-  --referee: #c7d4ff;
-  --referee-soft: #1e4ed838;
-  --koi-soft: #ff7a4529;
+  --color-canvas: #0b1b2b;
+  --color-surface: #112437;
+  --color-surface-2: #16304a;
+  --color-glass: #112437cc;
+  --color-ink: #eef3f8;
+  --color-ink-2: #c5d0dc;
+  --color-muted: #8fa0b2;
+  --color-line: #1f3a55;
+  --color-line-2: #eef3f833;
+  --color-pulse: #8fb0ff;
+  --color-pulse-ink: #0b1b2b;
+  --color-pulse-soft: #1e4ed838;
+  --color-pulse-soft-ink: #c7d4ff;
+  --color-live: #22d3ee;
+  --color-live-soft: #22d3ee29;
+  --color-mint: #6ee7b7;
+  --color-mint-mark: #0f9d76;
+  --color-mint-soft: #0f9d7633;
+  --color-coral: #fca5a5;
+  --color-coral-mark: #e5484d;
+  --color-coral-soft: #e5484d33;
+  --color-amber: #fcd34d;
+  --color-amber-soft: #92400e4d;
+  --color-slate: #cbd5e1;
+  --color-slate-soft: #33415566;
+  --color-referee: #c7d4ff;
+  --color-referee-soft: #1e4ed838;
   --shadow-ring: 0 0 0 1.5px #eef3f829, 0 1px 2px #00000066;
   --shadow-card: 0 1px 2px #00000066, 0 8px 24px #00000059;
   --shadow-lift: 0 24px 60px #000000a6;
   --shadow-glass: inset 0 0.5px 0 #ffffff1f, 0 0 0 0.5px #eef3f81f, 0 4px 40px 8px #00000066, 0 34px 70px -34px #00000099;
   --shadow-focus: 0 0 0 4px #8fb0ff4d;
-  color-scheme: dark;
+  --color-koi-soft: #ff7a4529;
 }
 
-@theme inline {
-  --color-canvas: var(--canvas);
-  --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
-  --color-glass: var(--glass);
-  --color-ink: var(--ink);
-  --color-ink-2: var(--ink-2);
-  --color-muted: var(--muted);
-  --color-line: var(--line);
-  --color-line-2: var(--line-2);
-  --color-pulse: var(--pulse);
-  --color-pulse-ink: var(--pulse-ink);
-  --color-pulse-soft: var(--pulse-soft);
-  --color-pulse-soft-ink: var(--pulse-soft-ink);
-  --color-live: var(--live);
-  --color-live-soft: var(--live-soft);
-  --color-mint: var(--mint);
-  --color-mint-mark: var(--mint-mark);
-  --color-mint-soft: var(--mint-soft);
-  --color-coral: var(--coral);
-  --color-coral-mark: var(--coral-mark);
-  --color-coral-soft: var(--coral-soft);
-  --color-amber: var(--amber);
-  --color-amber-soft: var(--amber-soft);
-  --color-slate: var(--slate);
-  --color-slate-soft: var(--slate-soft);
-  --color-referee: var(--referee);
-  --color-referee-soft: var(--referee-soft);
-  --color-koi: var(--koi);
-  --color-koi-soft: var(--koi-soft);
-  --color-floor-bg: var(--floor-bg);
-  --color-floor-ground: var(--floor-ground);
-  --color-floor-line: var(--floor-line);
-  --color-floor-rope: var(--floor-rope);
-  --color-pac: var(--pac);
-  --color-ghost-1: var(--ghost-1);
-  --color-ghost-2: var(--ghost-2);
-  --color-ghost-3: var(--ghost-3);
-  --color-ghost-4: var(--ghost-4);
-  --color-ghost-eaten: var(--ghost-eaten);
-  --color-shield: var(--shield);
-  --color-checker: var(--checker);
-  --shadow-ring: var(--shadow-ring);
-  --shadow-card: var(--shadow-card);
-  --shadow-lift: var(--shadow-lift);
-  --shadow-glass: var(--shadow-glass);
-  --shadow-focus: var(--shadow-focus);
-  --radius-card: var(--radius);
-  --radius-pill: 999px;
-  --ease-spring: cubic-bezier(0.2, 0.9, 0.3, 1);
-
-  /* v1 names kept as aliases of v2 tokens, so screens not yet rebuilt still render in the v2 palette. */
-  --color-panel: var(--surface);
-  --color-soft: var(--surface-2);
-  --color-canvas-2: var(--surface-2);
-  --color-accent: var(--ink);
-  --color-accent-2: var(--ink-2);
-  --color-accent-ink: var(--canvas);
-  --color-accent-soft: var(--slate-soft);
-  --color-flare: var(--coral);
-  --color-flare-soft: var(--coral-soft);
-  --color-sky: var(--pulse);
-  --color-sky-soft: var(--pulse-soft);
-  --color-royal: var(--referee);
-  --color-royal-soft: var(--referee-soft);
-
-  /* next/font sets these variables on <html>; see fonts.ts. Geist only (v2): display is Geist 500 with tight tracking. */
-  --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+:root {
+  --t-fast: 160ms;
+  --t-base: 240ms;
+  --t-slow: 420ms;
+  --t-pulse: 1800ms;
+  --t-ticker: 900ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  /* Plain-CSS aliases for var(--x) users (SVG strokes, inline styles). */
+  --canvas: var(--color-canvas);
+  --panel: var(--color-surface);
+  --soft: var(--color-surface-2);
+  --glass: var(--color-glass);
+  --ink: var(--color-ink);
+  --ink-2: var(--color-ink-2);
+  --muted: var(--color-muted);
+  --line: var(--color-line);
+  --line-2: var(--color-line-2);
+  --accent: var(--color-pulse);
+  --accent-ink: var(--color-pulse-ink);
+  --accent-soft: var(--color-pulse-soft);
+  --coral: var(--color-coral);
+  --coral-soft: var(--color-coral-soft);
+  --mint: var(--color-mint);
+  --mint-soft: var(--color-mint-soft);
+  --amber: var(--color-amber);
+  --amber-soft: var(--color-amber-soft);
+  --sky: var(--color-slate);
+  --sky-soft: var(--color-slate-soft);
+  --royal: var(--color-referee);
+  --royal-soft: var(--color-referee-soft);
+  --slate: var(--color-slate);
+  --slate-soft: var(--color-slate-soft);
+  --radius: var(--radius-lg);
+  --shadow: var(--shadow-lift);
+  --koi: var(--color-koi);
+  --surface: var(--color-surface);
+  --surface-2: var(--color-surface-2);
+  --pulse: var(--color-pulse);
+  --pulse-ink: var(--color-pulse-ink);
+  --live: var(--color-live);
+  --live-soft: var(--color-live-soft);
+  --mint-mark: var(--color-mint-mark);
+  --coral-mark: var(--color-coral-mark);
+  --referee: var(--color-referee);
+  color-scheme: light;
 }
 
-html { overflow-x: hidden; }
+html {
+  overflow-x: hidden;
+}
 body {
-  background: var(--canvas);
-  color: var(--ink);
+  background: var(--color-canvas);
+  color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: 15px;
-  line-height: 20px;
+  line-height: 1.5;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
 }
 
-/* Prism's cool wash: one soft cyan and one soft blue glow at the top of the page. Static, decorative only. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0 0 auto 0;
-  height: 70vh;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(50% 70% at 12% 0%, var(--live-soft), transparent 70%),
-    radial-gradient(45% 60% at 92% 4%, var(--pulse-soft), transparent 70%);
-}
-main, header, footer, nav { position: relative; z-index: 1; }
-::selection { background: var(--pulse); color: var(--pulse-ink); }
-
-/* One card style for every panel (v2: thin line plus two soft shadow layers). Keep .panel so untouched pages still render. */
+/* One card style for every panel (v2: surface, 1px line, radius 16, card shadow). Keep .panel so untouched pages still render. */
 .panel,
 .card { position: relative; isolation: isolate; }
 .card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
-.card-active { border-color: var(--pulse); box-shadow: var(--shadow-card), var(--shadow-focus); }
-.glass {
-  background: var(--glass);
-  border-radius: 20px;
-  box-shadow: var(--shadow-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+.card-active {
+  border-color: var(--color-pulse);
+  box-shadow: var(--shadow-card), var(--shadow-focus);
 }
 
-.btn { transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out), background-color 160ms var(--ease-out); }
+/* Pressed state: scale 0.98 over 160 ms. */
+.btn {
+  transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out), background-color var(--t-fast) var(--ease-out);
+}
 .btn:active { transform: scale(0.98); }
-
-:focus-visible { outline: 2px solid var(--pulse); outline-offset: 2px; }
-
-/* The live dot: a solid centre and one expanding ring (Prism's heartbeat). Use with text-live, text-pulse, ... */
-.dot { position: relative; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
-.dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: currentColor; opacity: 0.5; animation: tb-pulse 1800ms var(--ease-out) infinite; }
-@keyframes tb-pulse { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(2.6); opacity: 0; } }
-.rise { animation: tb-rise 420ms cubic-bezier(0.2, 0.9, 0.3, 1) both; }
-@keyframes tb-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@keyframes pop { from { transform: scale(.6); opacity: 0 } to { transform: scale(1); opacity: 1 } }
-@keyframes orbit { to { transform: rotate(360deg) } }
-@keyframes beacon { 0%, 100% { opacity: .35; transform: scale(1) } 50% { opacity: .9; transform: scale(1.08) } }
-
-/* Kept for screens not yet rebuilt: "in the arena now" is now the live cyan heartbeat. */
-@keyframes torch {
-  0%, 100% { box-shadow: 0 0 0 0 #0891b200; opacity: .85 }
-  50% { box-shadow: 0 0 0 4px #0891b233; opacity: 1 }
+@media (prefers-reduced-motion: reduce) {
+  .btn:active { transform: none; }
 }
-.torch { animation: torch 1.8s ease-in-out infinite; }
+
+:focus-visible {
+  outline: 2px solid var(--color-pulse);
+  outline-offset: 2px;
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
-  .btn:active { transform: none; }
 }
+
+@keyframes pop {
+  from { transform: scale(.6); opacity: 0 }
+  to { transform: scale(1); opacity: 1 }
+}
+@keyframes tb-pulse {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+@keyframes orbit { to { transform: rotate(360deg) } }
+@keyframes beacon { 0%, 100% { opacity: .35; transform: scale(1) } 50% { opacity: .9; transform: scale(1.08) } }
+
+main, header, footer { position: relative; z-index: 1; }
+::selection { background: var(--color-pulse); color: var(--color-pulse-ink); }
+
+/* Glass card (one per screen), the live dot (Prism's heartbeat) and the 8 px rise. */
+.glass { background: var(--color-glass); border-radius: 20px; box-shadow: var(--shadow-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.dot { position: relative; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: currentColor; opacity: 0.5; animation: tb-pulse var(--t-pulse) var(--ease-out) infinite; }
+.rise { animation: tb-rise var(--t-slow) cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes tb-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* In-arena pulse, kept by name for the screens that use it. */
+@keyframes torch {
+  0%, 100% { opacity: .85 }
+  50% { opacity: 1 }
+}
+.torch { animation: torch 1.8s ease-in-out infinite; }
