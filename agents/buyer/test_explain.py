@@ -119,7 +119,8 @@ def test_pulse_band_is_used_when_market_pulse_publishes_one(monkeypatch):
     assert "dated price history" in fair_band.price_line({"lines": [line(price=1239.0)]})
 
 
-def test_without_pulse_the_dated_baseline_band_is_used_and_matches_the_advocate_tolerance():
+def test_without_pulse_the_dated_baseline_band_is_used_and_matches_the_advocate_tolerance(monkeypatch):
+    monkeypatch.setattr(fair_band, "_pulse_band", lambda sku: None)  # Pulse's own band is on main now; this is the fallback
     assert fair_band.TOLERANCE == checks.PRICE_TOLERANCE
     band = fair_band.band_for("rtx 5070 ti")  # the repo's dated baseline feed
     assert band and band["who"] == "dated price history" and band["low"] < band["median"] < band["high"]
