@@ -169,8 +169,13 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
             return wrote
         path = wrote
         # #412: readiness is advice read from the listing pages after the shop is safely written; it never stops the write. summarize blocks on page fetches (up to 25 s), so it runs off the event loop.
+        try:
+            ready = await asyncio.to_thread(readiness.summarize, norm)
+        except Exception:  # noqa: BLE001  (the shop is already written: a crash here must not become a 500 and then a 409 on retry)
+            ready = {"line": "Readiness: not checked (the check failed; the shop is saved)", "listings": [readiness._skipped(
+                sku, (l or {}).get("listing_url"), "the readiness check failed") for sku, l in (norm.get("listings") or {}).items()]}
         return JSONResponse({"id": norm["id"], "name": norm["name"], "origin": norm["origin"], "config_path": str(path),
-                             "run_command": run_command(path), "readiness": await asyncio.to_thread(readiness.summarize, norm)}, status_code=201)
+                             "run_command": run_command(path), "readiness": ready}, status_code=201)
 
     def _write(norm: dict, replace: bool):   # a JSONResponse for a refusal, else the path written
         path = folder / f"{norm['id']}.json"

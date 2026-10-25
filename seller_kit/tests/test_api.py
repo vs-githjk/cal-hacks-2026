@@ -537,3 +537,18 @@ def test_a_slow_readiness_check_does_not_stall_the_server(custom, monkeypatch):
     health, post = asyncio.run(go())
     assert health.status_code == 200 and health.json() == {"ok": True}
     assert post.status_code == 201
+
+
+def test_a_readiness_crash_after_the_write_is_a_201_with_a_not_checked_row_and_a_retry_is_not_a_surprise(custom, monkeypatch):
+    from seller_kit import readiness
+
+    def boom(norm):
+        raise RuntimeError("readiness exploded")
+    monkeypatch.setattr(readiness, "summarize", boom)
+    c = TestClient(api.create_app(custom_dir=custom), raise_server_exceptions=False)
+    r = c.post("/v1/sellers", json=good())
+    assert r.status_code == 201
+    rows = r.json()["readiness"]["listings"]
+    assert rows and all(x["status"] == "not_checked" for x in rows)
+    assert "failed" in r.json()["readiness"]["line"]
+    assert (custom / f"{good()['id']}.json").exists()   # the shop was written, and said so
