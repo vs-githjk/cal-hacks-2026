@@ -129,15 +129,15 @@ function FloorView({ sample, sampleBeat }: { sample: SampleName | null; sampleBe
           <ActorList scene={scene} reveal={reveal} picked={picked} onPick={setPicked} />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-[24px] shadow-[0_30px_80px_rgba(0,0,0,0.5)]">
+        <div className="overflow-hidden rounded-[24px] shadow-[0_30px_80px_rgba(0,0,0,0.5)] ring-1 ring-white/10">
           <div className="relative flex min-w-0 flex-col sm:block">
             {webgl ? (
               <Floor3D scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} onUnavailable={() => setUnavailable(true)} />
             ) : (
-              <div className="grid h-[440px] place-items-center bg-[#F1E7D9] text-[#2B2A33]/60 lg:h-[600px]">Loading the floor...</div>
+              <div className="grid h-[440px] place-items-center bg-[#F6E2CC] text-[#2B2A33]/60 lg:h-[600px]">Loading the floor...</div>
             )}
             {/* phones: the story sits above the scene so it never covers the figures; wider screens overlay it */}
-            <div className="pointer-events-none z-20 bg-[#FBF6EE] p-4 max-sm:order-first sm:absolute sm:inset-x-0 sm:top-0 sm:bg-transparent sm:p-6">{top}</div>
+            <div className="pointer-events-none z-20 bg-[#FFF6EA] p-4 max-sm:order-first max-sm:[&_.story-card]:bg-transparent max-sm:[&_.story-card]:p-0 max-sm:[&_.story-card]:shadow-none max-sm:[&_.story-card]:ring-0 sm:absolute sm:inset-x-0 sm:top-0 sm:bg-transparent sm:p-6">{top}</div>
             {disconnected && (
               <div className="absolute inset-0 z-30 grid place-items-center bg-canvas/70">
                 {everActive ? (
@@ -148,7 +148,7 @@ function FloorView({ sample, sampleBeat }: { sample: SampleName | null; sampleBe
               </div>
             )}
           </div>
-          <div className="border-t border-[#E4D8C6] bg-[#FBF8F3] px-4 py-3 sm:px-6">{controls}</div>
+          <div className="border-t border-white/10 bg-[#17120E] px-4 py-3 sm:px-6">{controls}</div>
         </div>
       )}
       <div className="grid gap-3.5 lg:grid-cols-[7fr_5fr]">
@@ -185,13 +185,13 @@ function ClosesIn({ deadline, sample }: { deadline: Date; sample: boolean }) {
 function StoryTop({ story, sample, deadline }: { story: Story; sample: boolean; deadline: Date | null }) {
   return (
     <div className="flex items-start justify-between gap-3 text-[#2B2A33]">
-      <div className="min-w-0 max-w-[46ch]">
-        {story.hero && <p className="text-[28px] font-bold leading-[1.08] tracking-[-0.02em] sm:text-[36px]">{story.hero}</p>}
+      <div className="story-card min-w-0 max-w-[46ch] rounded-2xl bg-white/90 p-4 shadow-[0_8px_24px_rgba(60,40,30,0.16)] ring-1 ring-black/5 backdrop-blur-md sm:p-5">
+        {story.hero && <p className="font-display text-[28px] font-bold leading-[1.08] tracking-[-0.02em] sm:text-[36px]">{story.hero}</p>}
         <p role="status" className="mt-1 text-[16px] leading-snug text-[#2B2A33]/85 sm:text-[18px]">{story.caption}</p>
         {story.note && <p className="mt-1.5 text-[13px] leading-snug text-[#2B2A33]/65">{story.note}</p>}
       </div>
       <div className="flex shrink-0 flex-col items-end gap-2">
-        <p className="flex items-center gap-2 text-[14px] text-[#2B2A33]/75">
+        <p className="flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-[14px] text-[#2B2A33]/75 shadow-[0_2px_8px_rgba(60,40,30,0.15)] backdrop-blur-md">
           {story.status}
           {sample && <span className="rounded-md border border-dashed border-[#2B2A33]/50 px-1.5 py-0.5 font-mono text-[11px] font-semibold leading-[1.5] tracking-[0.06em]">SIM</span>}
         </p>
@@ -202,7 +202,10 @@ function StoryTop({ story, sample, deadline }: { story: Story; sample: boolean; 
 }
 
 const BUTTON =
-  "pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#2B2A33]/15 bg-white px-4 text-[15px] font-medium text-[#2B2A33] shadow-[0_1px_2px_rgba(60,40,30,0.08)] hover:bg-[#F6F1EA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F3E66] disabled:cursor-not-allowed disabled:opacity-50";
+  "pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-[15px] font-medium text-white hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E9B949] disabled:cursor-not-allowed disabled:opacity-40";
+
+const PRIMARY =
+  "pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 text-[15px] font-semibold text-[#17120E] hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E9B949]";
 
 const STEPS = ["Request", "Sealed bids", "Rounds", "Winner"] as const;
 
@@ -228,29 +231,29 @@ function Controls({ pb, scene, act }: { pb: Playback; scene: ArenaScene; act: (a
   const done = pb.beat >= total;
   const at = stepOf(scene, pb.beat);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 text-[#2B2A33]">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 text-white">
       <ol className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
         {STEPS.map((name, i) => {
           const state = i < at || (i === at && done && total > 0 && i === 3) ? "done" : i === at ? "now" : "next";
           const seekable = total > 0 && i >= 1 && state !== "next";
           return (
             <li key={name} className="flex items-center gap-2">
-              {i > 0 && <span aria-hidden="true" className={`hidden h-px w-8 sm:block ${i <= at ? "bg-[#4F7F7C]" : "bg-[#2B2A33]/20"}`} />}
+              {i > 0 && <span aria-hidden="true" className={`hidden h-px w-8 sm:block ${i <= at ? "bg-[#E9B949]" : "bg-white/20"}`} />}
               <button
                 type="button"
                 disabled={!seekable}
                 onClick={() => act({ type: "seek", beat: seekFor(scene, i) })}
                 aria-current={state === "now" ? "step" : undefined}
-                className="flex min-h-11 items-center gap-2 rounded-full px-1.5 text-[14px] disabled:cursor-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#4F7F7C]"
+                className="flex min-h-11 items-center gap-2 rounded-full px-1.5 text-[14px] disabled:cursor-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E9B949]"
               >
-                <span className={`grid h-5 w-5 place-items-center rounded-full border-2 ${state === "now" ? "border-[#4F7F7C] bg-[#4F7F7C] shadow-[0_0_0_4px_rgba(79,127,124,0.18)]" : state === "done" ? "border-[#4F7F7C] bg-[#4F7F7C]/15" : "border-[#2B2A33]/25"}`}>
+                <span className={`grid h-5 w-5 place-items-center rounded-full border-2 ${state === "now" ? "border-[#E9B949] bg-[#E9B949] shadow-[0_0_0_4px_rgba(233,185,73,0.22)]" : state === "done" ? "border-[#E9B949] bg-[#E9B949]/15" : "border-white/25"}`}>
                   {state === "done" && (
-                    <svg viewBox="0 0 12 12" className="h-3 w-3 text-[#4F7F7C]" aria-hidden="true">
+                    <svg viewBox="0 0 12 12" className="h-3 w-3 text-[#E9B949]" aria-hidden="true">
                       <path d="M2.5 6.5 5 9l4.5-5.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   )}
                 </span>
-                <span className={state === "now" ? "font-semibold" : state === "next" ? "text-[#2B2A33]/55" : ""}>{name}</span>
+                <span className={state === "now" ? "font-semibold" : state === "next" ? "text-white/50" : ""}>{name}</span>
               </button>
             </li>
           );
@@ -259,11 +262,11 @@ function Controls({ pb, scene, act }: { pb: Playback; scene: ArenaScene; act: (a
       {total > 0 && (
         <div className="flex gap-2">
           {pb.playing ? (
-            <button type="button" className={BUTTON} onClick={() => act({ type: "pause" })}><Icon d="M4 3h2.5v10H4zM9.5 3H12v10H9.5z" />Pause</button>
+            <button type="button" className={PRIMARY} onClick={() => act({ type: "pause" })}><Icon d="M4 3h2.5v10H4zM9.5 3H12v10H9.5z" />Pause</button>
           ) : done ? (
-            <button type="button" className={BUTTON} onClick={() => act({ type: "replay" })}><Icon d="M8 2.5a5.5 5.5 0 1 1-5.2 3.7l1.4.5A4 4 0 1 0 8 4v2L4.5 3.25 8 .5z" />Replay</button>
+            <button type="button" className={PRIMARY} onClick={() => act({ type: "replay" })}><Icon d="M8 2.5a5.5 5.5 0 1 1-5.2 3.7l1.4.5A4 4 0 1 0 8 4v2L4.5 3.25 8 .5z" />Replay</button>
           ) : (
-            <button type="button" className={BUTTON} onClick={() => act({ type: "resume" })}><Icon d="M4.5 3 12.5 8l-8 5z" />Play</button>
+            <button type="button" className={PRIMARY} onClick={() => act({ type: "resume" })}><Icon d="M4.5 3 12.5 8l-8 5z" />Play</button>
           )}
           <button type="button" className={BUTTON} disabled={done} onClick={() => act({ type: "skip" })}><Icon d="M3 3l7 5-7 5zM11 3h2v10h-2z" />Skip</button>
         </div>

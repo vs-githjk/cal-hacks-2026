@@ -28,13 +28,13 @@ interface Api { sync: () => void }
 // ---- art direction -------------------------------------------------------------------------------------------------
 // A sunlit limestone plaza with gold trim, planters and banners; matte clay figures in neutral tones, the buyer in teal.
 const C = {
-  fog: 0xf3ebdf, floor: 0xece3d4, t1: 0xf1e9dc, t2: 0xf6f0e6, side: 0xe0d3bf, wall: 0xe6dbc9, wallTop: 0xf1e9dd,
-  gold: 0xc9a45c, charcoal: 0x3a3a3d, leaf1: 0x5f8c57, leaf2: 0x7aa66b, leaf3: 0x4c7746, banner: 0xe8d9bf,
-  buyer: 0x4f7f7c, advocate: 0xe9dfd0, eye: 0x1f1f22, knock: 0xb9b3ab, paper: 0xfbf4e6, wax: 0xb8863b, table: 0xe3d6c2,
-  stone: 0xe4d9c8, anon: 0x9b958e,
+  fog: 0xf2dcc6, floor: 0xdcc8aa, t1: 0xefe2cc, t2: 0xfbf5ec, side: 0xc8b08d, wall: 0xd79a76, wallTop: 0xedcdb0,
+  gold: 0xd4a548, charcoal: 0x2b2a33, leaf1: 0x4f8a4a, leaf2: 0x6fae5f, leaf3: 0x3c6e3a, banner: 0x2f3e66,
+  buyer: 0x2f6f6a, advocate: 0xf3ebdf, eye: 0x1f1f22, knock: 0xbdb3a9, paper: 0xfff4e2, wax: 0xc8553d, table: 0xe9d9c1,
+  stone: 0xe8dccb, anon: 0x9b958e,
 };
-const SUN = 2.4;
-const HEMI = 1.15;
+const SUN = 2.6;
+const HEMI = 1.05;
 const CROWN_ZOOM = 0.06;
 const SPOT = 90;
 const BUYER_SCALE = 1.4;
@@ -125,7 +125,7 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
     host.appendChild(canvas);
 
     renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.08;
+    renderer.toneMappingExposure = 1.0;
     const scene = new T.Scene();
     scene.fog = new T.Fog(C.fog, 20, 42);
     const camera = new T.PerspectiveCamera(VFOV, 16 / 9, 0.5, 80);
@@ -138,15 +138,15 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
     placeCamera();
 
     // Light: a warm low sun from the upper left (long soft shadows), a bright sky fill, and a warm spot that only the crown turns on.
-    const hemi = new T.HemisphereLight(0xfff8ef, 0xd9cbb8, HEMI);
-    const sun = new T.DirectionalLight(0xfff0dc, SUN);
+    const hemi = new T.HemisphereLight(0xfff4e6, 0xb9b0d6, HEMI);
+    const sun = new T.DirectionalLight(0xffe4c2, SUN);
     sun.position.set(-7, 11, 6);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
     Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 34 });
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.025;
-    const spot = new T.SpotLight(0xffe2a8, 0, 0, 0.3, 0.7, 2);
+    const spot = new T.SpotLight(0xffd98a, 0, 0, 0.3, 0.7, 2);
     spot.position.set(0, 10, 6);
     scene.add(hemi, sun, spot, spot.target);
     undo.push(() => { sun.dispose(); spot.dispose(); });
@@ -176,10 +176,10 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
     };
     const std = (color: number, rough = 0.7, metal = 0) => new T.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
     const M = {
-      eye: std(C.eye, 0.35), paper: std(C.paper, 0.75), wax: std(C.wax, 0.45, 0.3), table: std(C.table, 0.85), gold: std(C.gold, 0.32, 0.65),
+      eye: std(C.eye, 0.35), paper: std(C.paper, 0.75), wax: std(C.wax, 0.45, 0.3), table: std(C.table, 0.85), gold: std(C.gold, 0.3, 0.55),
       charcoal: std(C.charcoal, 0.6), cream: std(C.advocate),
       ring: new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false, fog: false }),
-      bits: [0xc9a45c, 0xf6f0e6, 0x4f7f7c, 0xe3b9a0, 0x8a9a7b, 0x3a3a3d].map((c) => new T.MeshStandardMaterial({ color: c, roughness: 0.6, side: T.DoubleSide })),
+      bits: [...SELLER_COLORS, 0xd4a548, 0xfff4e2].map((c) => new T.MeshStandardMaterial({ color: c, roughness: 0.6, side: T.DoubleSide })),
     };
     const knock = new T.Color(C.knock);
 
@@ -190,13 +190,13 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
       m.position.y = (y0 + y1) / 2;
       return m;
     };
-    const trim = (r: number, y: number, tube = 0.035) => {
+    const trim = (r: number, y: number, tube = 0.05) => {
       const t = add(new T.Mesh(new T.TorusGeometry(r, tube, 8, 160), M.gold), false, true);
       t.rotation.x = Math.PI / 2;
       t.position.y = y;
     };
     disc(9.5, -0.3, 0, C.floor);
-    trim(4.05, 0.004, 0.025);
+    trim(4.05, 0.004, 0.04);
     disc(3.4, 0, 0.22, C.t1);
     trim(3.4, 0.22);
     disc(1.5, 0.22, 0.44, C.t2);
@@ -205,9 +205,9 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
     const joints = new T.BufferGeometry().setFromPoints(
       Array.from({ length: 48 }, (_, i) => { const a = (i / 48) * Math.PI * 2; return [new T.Vector3(Math.sin(a) * 4.1, 0.003, Math.cos(a) * 4.1), new T.Vector3(Math.sin(a) * 7.6, 0.003, Math.cos(a) * 7.6)]; }).flat(),
     );
-    scene.add(new T.LineSegments(joints, new T.LineBasicMaterial({ color: 0xd8ccb9, transparent: true, opacity: 0.6 })));
+    scene.add(new T.LineSegments(joints, new T.LineBasicMaterial({ color: 0xc7b291, transparent: true, opacity: 0.5 })));
 
-    const wallMat = std(C.wall, 0.92), capMat = std(C.wallTop, 0.9), potMat = std(0xe9dfcf, 0.9), soilMat = std(0x5e4a3a, 1);
+    const wallMat = std(C.wall, 0.92), capMat = std(C.wallTop, 0.9), potMat = std(0xc4734f, 0.9), soilMat = std(0x5e4a3a, 1);
     const leafMats = [std(C.leaf1, 0.75), std(C.leaf2, 0.75), std(C.leaf3, 0.75)];
     const blockGeo = new T.BoxGeometry(1, 0.62, 0.7), capGeo = new T.BoxGeometry(1.06, 0.08, 0.78);
     const leafGeo = new T.SphereGeometry(0.22, 12, 8);
@@ -245,7 +245,7 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
       }
     }
     // The arch: two pillars and a lintel at the back, the market's gate.
-    const archMat = std(0xeae0cf, 0.9);
+    const archMat = std(0xf0e4d2, 0.9);
     for (const sx of [-1, 1]) {
       const p = add(new T.Mesh(new T.BoxGeometry(0.7, 3.4, 0.7), archMat));
       p.position.set(sx * 1.55, 1.7, -WALL_R);
@@ -301,7 +301,7 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
       }
     };
     bench(-3.0, 1.8, 0.2);
-    const crateMat = std(0xc9a679, 0.9);
+    const crateMat = std(0xc99a63, 0.9);
     for (const [x, y, z, s, ry] of [[3.2, 0.38, 2.4, 0.76, 0.3], [3.32, 1.0, 2.36, 0.5, -0.25]] as const) {
       const crate = add(new T.Mesh(new T.BoxGeometry(s, s, s), crateMat));
       crate.position.set(x, y, z);
@@ -330,8 +330,6 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
     const fresh = (): Vis => ({ x: 0, y: 0, z: 0, yaw: 0, pitch: 0, dim: 0, vis: 0, aim: 0 });
     // Clay people: a big round head, a capsule torso, capsule legs, and arms on shoulder pivots so they can hold, wave or droop.
     // Sellers get a clay tone and an accessory (cap, bun, backpack, satchel) from their look; tone is personality, never meaning.
-    const CLAY = [0x4b4b4e, 0x8b8783, 0xa38c74, 0xc6b49b, 0x6f5f53, 0xa7aaa6, 0xb5917a] as const;
-    const toneOf = (look: Look) => CLAY[Math.max(0, SELLER_COLORS.indexOf(look.color as (typeof SELLER_COLORS)[number])) % CLAY.length]!;
     const shade = (c: number, k: number) => new T.Color(c).multiplyScalar(k).getHex();
     const addFig = (k: string, kind: FigKind, color: number, look: Look | null): Fig => {
       const scale = kind === "buyer" ? BUYER_SCALE : FIG_SCALE;
@@ -720,7 +718,7 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
         cards.delete(id);
       }
       s.offers.forEach((o, i) => {
-        if (!figs.has(o.key)) { const f = addFig(o.key, "offer", toneOf(looks[o.key]!), looks[o.key]!); f.sig = sigOf(o.key); figs.set(o.key, f); }
+        if (!figs.has(o.key)) { const f = addFig(o.key, "offer", looks[o.key]!.color, looks[o.key]!); f.sig = sigOf(o.key); figs.set(o.key, f); }
         let c = cards.get(o.bidId);
         if (!c) {
           c = { bidId: o.bidId, owner: o.key, index: i, seat: seatOf(s.offers.length, i), group: mkEnvelope(), state: "hidden", xf: { x: 0, y: 0, z: 0, rx: 0, ry: 0, vis: 0 }, tw: null };
@@ -945,7 +943,7 @@ function SealedCard() {
       <svg viewBox="0 0 40 28" className="h-6 w-9" aria-hidden="true">
         <rect x="1" y="1" width="38" height="26" rx="3" fill="#FBF4E6" stroke="#D9C8AE" />
         <path d="M2 3 20 16 38 3" fill="none" stroke="#D9C8AE" strokeWidth="1.4" />
-        <circle cx="20" cy="15.5" r="4.2" fill="#B8863B" />
+        <circle cx="20" cy="15.5" r="4.2" fill="#C8553D" />
       </svg>
       Offer sealed
     </div>
@@ -1039,10 +1037,9 @@ export function Floor3D({ scene, beat, frozen, reducedMotion, selected, onPick, 
     <div
       ref={box}
       className="relative h-[440px] w-full overflow-hidden lg:h-[600px]"
-      style={{ background: "radial-gradient(120% 90% at 50% 35%, #FBF6EE 0%, #F1E7D9 70%, #E8DCCB 100%)" }}
+      style={{ background: "radial-gradient(120% 95% at 50% 30%, #FFF6EA 0%, #F6E2CC 55%, #E6C6A8 100%)" }}
     >
       <div ref={host} className="absolute inset-0" aria-hidden="true" />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[5]" style={{ background: "radial-gradient(60% 45% at 0% 0%, rgba(251,246,238,0.92) 0%, rgba(251,246,238,0.6) 45%, rgba(251,246,238,0) 75%), radial-gradient(28% 22% at 100% 0%, rgba(251,246,238,0.9) 0%, rgba(251,246,238,0) 80%)" }} />
       {plates.map((p) =>
         p.say || p.sealed ? (
           <div key={`${p.key}#top`} data-prio={p.sealed ? 1 : 0} data-anchor="top" ref={setEl(`${p.key}#top`)} className={`pointer-events-none absolute left-0 top-0 z-10 will-change-transform ${p.sealed ? "" : "max-sm:hidden"}`} style={HIDDEN}>
@@ -1054,7 +1051,7 @@ export function Floor3D({ scene, beat, frozen, reducedMotion, selected, onPick, 
         <div key={p.key} data-prio={p.prio} data-anchor="feet" ref={setEl(p.key)} className={`pointer-events-none absolute left-0 top-0 z-10 will-change-transform ${p.prio >= 2 && p.word !== "Winner" && p.key !== "buyer" ? "max-sm:hidden" : ""}`} style={HIDDEN}>
           <button type="button" onClick={() => onPick(p.key)} aria-pressed={selected === p.key} className="pointer-events-auto flex min-h-[44px] items-start p-1 text-left">
             <span
-              className={`flex flex-col items-center whitespace-nowrap rounded-lg bg-[#FBF7F0]/95 px-2.5 py-[3px] text-[13px] font-medium leading-[17px] text-[#2B2A33] shadow-[0_3px_10px_rgba(90,60,30,0.14)] ${selected === p.key ? "ring-2 ring-[#4F7F7C]" : ""} ${p.struck ? "opacity-75" : ""} ${p.word === "Winner" ? "bg-[#FFF6DD] ring-1 ring-[#C9A45C]" : ""}`}
+              className={`flex flex-col items-center whitespace-nowrap rounded-lg bg-white px-2.5 py-[3px] text-[13px] font-semibold leading-[17px] text-[#2B2A33] shadow-[0_4px_12px_rgba(60,40,30,0.18)] ${selected === p.key ? "ring-2 ring-[#2F6F6A]" : ""} ${p.struck ? "opacity-75" : ""} ${p.word === "Winner" ? "bg-[#FFF6DD] ring-2 ring-[#D4A548]" : ""}`}
             >
               <span className="flex items-center gap-1.5">
                 <span className={`max-w-[10rem] truncate ${p.struck ? "line-through" : ""}`}>{p.name}</span>

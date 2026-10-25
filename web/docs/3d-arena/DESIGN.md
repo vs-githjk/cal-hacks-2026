@@ -178,3 +178,15 @@ The budget, the ceiling band, and the approval code never appear anywhere in thi
 - Teardown disposes every geometry, material, and the renderer, removes listeners, disconnects the `ResizeObserver`, cancels the frame, and removes the canvas.
 - Sizing: a `ResizeObserver` on the container (not window resize). Zero width or height skips rendering until the size is real.
 - Frozen (market disconnected): no tweens start and no frames run. The last frame stays on screen. When it unfreezes, snap to the current target.
+
+## Palette v3: golden hour terrace (Sat night)
+
+Value structure: darker warm rim, brightest at the center stage. Colors flat in one cream band were the problem.
+
+- Plaza: fog 0xf2dcc6, floor 0xdcc8aa, t1 0xefe2cc, t2 0xfbf5ec, side 0xc8b08d, wall 0xd79a76 (terracotta), wallTop 0xedcdb0, stone 0xe8dccb, table 0xe9d9c1.
+- Accents: gold 0xd4a548 (roughness 0.3, metalness 0.55, trim tubes 0.05, floor ring 0.04), charcoal 0x2b2a33, banner 0x2f3e66 (navy), wax 0xc8553d (red seal), paper 0xfff4e2, pot 0xc4734f, arch 0xf0e4d2, crate 0xc99a63, paving joints 0xc7b291 at 0.5 opacity.
+- Foliage: leaf1 0x4f8a4a, leaf2 0x6fae5f, leaf3 0x3c6e3a.
+- Figures: buyer 0x2f6f6a (deep teal), advocate 0xf3ebdf, knocked 0xbdb3a9, anon 0x9b958e. Sellers now use their SELLER_COLORS hue as the body color (no more CLAY tones); legs stay shade(color, 0.72). Confetti uses SELLER_COLORS plus gold 0xd4a548 and cream 0xfff4e2.
+- Lights: HemisphereLight(0xfff4e6, 0xb9b0d6, 1.05) for a warm sky and cool lavender ground, sun 0xffe4c2 at SUN = 2.6, spot 0xffd98a, toneMappingExposure 1.0.
+- Container background: radial-gradient(120% 95% at 50% 30%, #FFF6EA 0%, #F6E2CC 55%, #E6C6A8 100%). The white corner wash overlay is removed.
+- Nameplates: solid white, 13px semibold, selected ring #2F6F6A, winner on #FFF6DD with a 2px #D4A548 ring.
