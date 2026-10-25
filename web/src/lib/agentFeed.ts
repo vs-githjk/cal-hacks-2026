@@ -16,12 +16,13 @@ export interface AgentRow {
   avatar: string | null;
 }
 
+const LOCAL_FEED = "http://127.0.0.1:8790";
 const LOOPBACK = /^(localhost|127\.\d+\.\d+\.\d+|\[::1\])$/;
 
-/** The feed to poll, or null to skip it: unset, unparseable, or a loopback feed seen from a page that is not itself on loopback
+/** The feed to poll, or null to skip it: unset on a deployed page, unparseable, or a loopback feed seen from a page that is not itself on loopback
  * (a judge's browser would hit its own machine and fail CORS). Null shows the Agentverse profile links instead of "offline". */
 export function feedBase(url: string | undefined, pageHost: string): string | null {
-  if (!url) return null;
+  if (!url) return LOOPBACK.test(pageHost) ? LOCAL_FEED : null;
   try {
     const u = new URL(url);
     if (LOOPBACK.test(u.hostname) && !LOOPBACK.test(pageHost)) return null;
@@ -33,7 +34,7 @@ export function feedBase(url: string | undefined, pageHost: string): string | nu
 
 export const FEED_ENV = process.env.NEXT_PUBLIC_AGENT_FEED_URL;
 /** The memory panel still reads this operator feed directly; it falls back to the local launcher. */
-export const FEED_URL = FEED_ENV ?? "http://127.0.0.1:8790";
+export const FEED_URL = FEED_ENV ?? LOCAL_FEED;
 export const ASI_ONE_URL = "https://asi1.ai/";
 export const POLL_MS = 2000;
 
