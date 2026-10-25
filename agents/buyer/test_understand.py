@@ -90,6 +90,22 @@ def test_a_budget_too_low_for_any_card_says_the_cheapest_price():
     assert out.goal is None and "can't fit a graphics card" in out.reply and "What is your maximum budget?" in out.reply
 
 
+def test_prices_and_fit_are_for_the_condition_the_owner_asked_for_never_another():
+    assert catalog.price("rtx 5070 ti", ["new"]) == 1190.0 and catalog.price("rtx 5070 ti", ["refurbished"]) == 1119.0
+    assert catalog.price("rtx 5070 ti", ["open-box"]) == 1199.0 and catalog.price("rtx 5070 ti") == 1119.0
+    assert catalog.price("rtx 5070 ti", ["used"]) is None
+    new = ask("a gpu under $2000, new, by friday").reply
+    assert "1) RTX 5070 Ti (listed from $1,190)" in new and "$1,119" not in new  # the refurbished price is not shown to a new-only buyer
+    refurb = ask("a gpu under $2000, refurbished, by friday").reply
+    assert "(listed from $1,119)" in refurb and "$1,190" not in refurb
+    # the budget fit uses the new price too: the used 7800 XT at $449 must not make "under $480" look possible
+    tight = ask("a gpu under $480, new, by friday")
+    assert tight.goal is None and "can't fit a graphics card" in tight.reply and "$489.99" in tight.reply
+    # open-box: only the 5070 Ti is listed that way today, so it is the one card, said plainly
+    box = ask("a gpu under $2000, open-box, by friday")
+    assert box.reply is None and skus(box) == ["rtx 5070 ti"] and any("Only the RTX 5070 Ti fits" in n for n in box.notes)
+
+
 def test_one_card_that_fits_is_chosen_and_said():
     out = ask("a gpu under $500, new, by friday")  # only the RX 7800 XT lists under $500 on today's floor
     assert out.reply is None and skus(out) == ["rx 7800 xt 16gb"]
@@ -97,10 +113,10 @@ def test_one_card_that_fits_is_chosen_and_said():
 
 
 def test_multi_part_build_asks_one_question_then_buys_what_the_floor_lists():
-    first, second, third, fourth = chat(["a 1440p gaming PC under $1,800", "2", "new", "by Friday"])
-    assert first.goal is None and "Which graphics card?" in first.reply and "1440p" in first.reply
-    assert "1) RTX 5070 Ti" in first.reply
-    assert second.goal is None and "new or open-box" in second.reply
+    first, second, third, fourth = chat(["a 1440p gaming PC under $1,800", "new", "2", "by Friday"])
+    assert first.goal is None and "new or open-box" in first.reply and "1440p" in first.reply and "under $1,800" in first.reply
+    assert "$1,440" not in first.reply  # the resolution is never read as a budget
+    assert second.goal is None and "Which graphics card?" in second.reply and "1) RTX 5070 Ti" in second.reply
     assert third.goal is None and "deadline" in third.reply
     assert skus(fourth) == ["rtx 4070 super 12gb", "psu 750w", "case"]
     assert fourth.goal["type"] == "build_by_date" and fourth.goal["cap"] == 1800
@@ -141,7 +157,7 @@ def test_answers_fill_the_slot_that_was_asked_in_any_order():
 
 
 def test_a_bare_gpu_conversation_option_by_number_and_by_name():
-    out = chat(["gpu", "$800", "1", "either", "friday"])
+    out = chat(["gpu", "$800", "either", "1", "friday"])
     assert out[-1].reply is None and skus(out[-1]) == ["rtx 4070 super 12gb"]
     assert out[-1].goal["items"][0]["allowed_conditions"] == ["new", "open-box"]
     out = chat(["gpu under $800 new by friday", "the rx 7800 xt"])
@@ -186,8 +202,8 @@ def fake(payload):
 
 def test_claude_reads_free_text_and_the_result_is_validated():
     payload = {"build": True, "parts": [{"part": "gpu", "model": "5070 ti"}], "use_case": "1440p", "budget_usd": 1800,
-               "conditions": ["new"], "deadline": "friday", "option": None}
-    out = ask("I want a sweet 1440p rig around 1800 bucks, brand new, by friday please, with the 5070 ti", llm=fake(payload))
+               "conditions": ["new"], "deadline": "friday"}
+    out = ask("I want a sweet 1440p rig, budget $1800, brand new, by friday please, with the 5070 ti", llm=fake(payload))
     assert out.reply is None and out.source == "claude"
     assert skus(out) == ["rtx 5070 ti", "psu 750w", "case"] and out.goal["cap"] == 1800
     assert out.goal["deadline"] == "2026-10-30T23:59:00Z" and out.goal["items"][0]["condition"] == "new"
@@ -196,10 +212,49 @@ def test_claude_reads_free_text_and_the_result_is_validated():
 def test_claude_cannot_invent_a_sku_or_a_budget():
     payload = {"build": False, "parts": [{"part": "gpu", "model": "RTX 9090 Ti"}], "budget_usd": 777,
                "conditions": ["new"], "deadline": "friday"}
-    out = ask("some monster card, new, friday", llm=fake(payload))
+    out = ask("an RTX 9090 Ti, new, friday", llm=fake(payload))
     assert out.goal is None and "RTX 9090 TI" in out.reply.upper() and "won't guess" in out.reply
     out = ask("an RTX 5070 Ti, new, friday", llm=fake(dict(payload, parts=[{"part": "gpu", "model": "5070 ti"}])))
     assert out.goal is None and out.reply.endswith("What is your maximum budget?")  # 777 was never typed: ignored
+
+
+def test_claude_cannot_name_a_card_the_owner_did_not_name():
+    payload = {"parts": [{"part": "gpu", "model": "RTX 5070 Ti"}], "budget_usd": 1300, "conditions": ["new"], "deadline": "friday"}
+    out = ask("something powerful for 4k under $1300, new, friday", llm=fake(payload))
+    assert out.goal is None and "Which graphics card?" in out.reply  # asked, not picked by the model
+
+
+@pytest.mark.parametrize(("text", "budget", "asks_budget"), [
+    ("a 4070 super please, new, by friday", 4070, True),                 # the model number is not a budget
+    ("a 1440p gaming PC, new, by friday", 1440, True),                   # nor is the resolution
+    ("an RTX 4070 Super 12GB under $700, new, by friday", 12, False),    # nor a memory size; the typed budget stands
+])
+def test_a_model_number_or_resolution_is_never_taken_as_a_budget(text, budget, asks_budget):
+    payload = {"parts": [{"part": "gpu", "model": "4070 super"}], "budget_usd": budget, "conditions": ["new"], "deadline": "friday"}
+    out = ask(text, llm=fake(payload))
+    if asks_budget:
+        assert out.goal is None and out.reply.endswith("What is your maximum budget?")
+        assert "$4,070" not in out.reply and "$1,440" not in out.reply
+    else:
+        assert out.goal["cap"] == 700
+
+
+def test_a_budget_is_accepted_from_the_model_only_when_it_matches_what_was_stated_or_answers_the_budget_question():
+    payload = {"parts": [{"part": "gpu", "model": "5070 ti"}], "budget_usd": 1300, "conditions": ["new"], "deadline": "friday"}
+    assert ask("an RTX 5070 Ti, budget $1300, new, friday", llm=fake(payload)).goal["cap"] == 1300
+    assert ask("an RTX 5070 Ti, new, friday, 1300 or so", llm=fake(payload)).reply.endswith("What is your maximum budget?")
+    one, two = chat(["an RTX 5070 Ti, new, friday", "$1,300"], llm=lambda t, c: {"budget_usd": 1300} if t == "$1,300" else None)
+    assert two.goal["cap"] == 1300
+
+
+def test_the_models_option_is_never_read_the_owner_picks_the_card():
+    liar = lambda t, c: {"option": 1, "conditions": ["new"]}  # noqa: E731  claims the owner chose option 1
+    out = chat(["gpu under $800, new", "hmm let me think", "new"], llm=liar)
+    assert "Which graphics card?" in out[0].reply
+    assert out[1].goal is None and "Which graphics card?" in out[1].reply  # "hmm" chooses nothing
+    assert out[2].goal is None and "Which graphics card?" in out[2].reply  # "new" must not select an option
+    picked = chat(["gpu under $800, new", "2"], llm=liar)[1]  # the owner's own "2" does
+    assert picked.reply.startswith("So far: RX 7800 XT 16GB, under $800, new.") and "deadline" in picked.reply
 
 
 def test_claude_cannot_decide_a_date_or_a_typed_number_the_code_disagrees_with():
@@ -237,7 +292,7 @@ def test_claude_reads_an_answer_in_the_context_of_the_question():
     def llm(text, ctx):
         seen.append(ctx)
         return {"conditions": ["new"]} if text == "yeah sealed in box" else {"parts": [{"part": "gpu", "model": "5070 ti"}], "budget_usd": 1300}
-    one, two = chat(["rtx 5070 ti 1300 max", "yeah sealed in box"], llm=llm)
+    one, two = chat(["rtx 5070 ti, max 1300", "yeah sealed in box"], llm=llm)
     assert two.reply.endswith("Give a date, weekday, or tomorrow.") and "new" in two.reply
     assert seen[1]["pending"] == {"slot": "condition", "options": []} and seen[1]["so_far"]["cap"] == 1300
 

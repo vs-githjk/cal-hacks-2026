@@ -92,15 +92,19 @@ NEXT_BUY = ("Next: I get a fresh quote and then call your phone for the approval
             "Nothing is paid unless you approve on that call.")
 
 
-def retry_line(attempts_so_far: int) -> str:
+def _after_failure(attempts_so_far: int) -> str:
     """What a failed round really leads to (buyer_agent.fail_round): a fresh round, or a paused goal after MAX_ATTEMPTS."""
     import hunt
     n = attempts_so_far + 1  # this round counts as a failure too
     if hunt.after_failed_round(n) == "PAUSED":
-        return (f"Next: nothing was ordered. That was failed round {n} of {hunt.MAX_ATTEMPTS}, so I paused this goal; "
+        return (f"Nothing was ordered. That was failed round {n} of {hunt.MAX_ATTEMPTS}, so I paused this goal; "
                 "send it again to restart.")
-    return (f"Next: nothing was ordered. That was failed round {n} of {hunt.MAX_ATTEMPTS}; "
+    return (f"Nothing was ordered. That was failed round {n} of {hunt.MAX_ATTEMPTS}; "
             f"I run a fresh round in {hunt.RETRY_S} seconds.")
+
+
+def retry_line(attempts_so_far: int) -> str:
+    return "Next: " + _after_failure(attempts_so_far)
 
 
 def closing(best: int | None, verdict: str | None, ready: bool, attempts_so_far: int) -> str:
@@ -108,9 +112,9 @@ def closing(best: int | None, verdict: str | None, ready: bool, attempts_so_far:
     or None, `verdict` is logic.decide's answer for it, `ready` is eligible_for_order."""
     if best is None:
         return ("Next: I will not order any of these bids (a store that never joined, a failed seller check or a veto "
-                "rules each one out). " + retry_line(attempts_so_far).removeprefix("Next: "))
+                "rules each one out). " + _after_failure(attempts_so_far))
     if verdict == "over_limit":
-        return "Next: the best eligible bid is over your cap. " + retry_line(attempts_so_far).removeprefix("Next: ")
+        return "Next: the best eligible bid is over your cap. " + _after_failure(attempts_so_far)
     if not ready:
         return ("Next: I will not order this bid because it is unreviewed or vetoed. Nothing was ordered; "
                 "reply CANCEL to start a new goal.")

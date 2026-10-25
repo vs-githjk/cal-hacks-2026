@@ -52,10 +52,11 @@ def test_summary_has_no_ids_and_is_one_paragraph():
 
 def test_a_veto_with_no_veto_warning_says_no_source_on_file_and_no_winner_says_so():
     s = summary(winner=None, cards={A["id"]: card(A, "veto"), B["id"]: card(B, "veto", "recall", "https://cpsc.gov/r/1")},
-                next_step=explain.NEXT_NONE)
+                next_step=explain.retry_line(0))
     assert "The advocate vetoed Byte Bros: the advocate found a problem (no source on file)." in s
     assert "the part matches a safety recall (source: cpsc.gov)" in s
-    assert "No bid survived the checks." in s and s.endswith("I keep hunting until your deadline.")
+    assert "No bid survived the checks." in s
+    assert s.endswith("Next: Nothing was ordered. That was failed round 1 of 3; I run a fresh round in 60 seconds.")
 
 
 def test_seller_text_is_plain_and_short():
@@ -81,11 +82,18 @@ BAND = {"low": 1170.0, "high": 1430.0, "median": 1300.0, "as_of": "2026-10-25T02
         "source_url": "https://www.bestbuy.com/p/1", "who": "dated price history"}
 
 
-@pytest.mark.parametrize(("price", "word"), [(1239.0, "looks fair"), (1500.0, "looks high"), (700.0, "looks suspiciously low, so be careful"),
-                                             (1170.0, "looks fair"), (1430.0, "looks fair")])
-def test_price_line_says_fair_high_or_suspiciously_low_with_the_source(price, word):
+USUAL = "the usual range of $1,170 to $1,430"
+
+
+@pytest.mark.parametrize(("price", "word"), [
+    (1239.0, f"looks fair, inside {USUAL}"), (1170.0, f"looks fair, inside {USUAL}"), (1430.0, f"looks fair, inside {USUAL}"),
+    (1500.0, f"looks high, above {USUAL}"),
+    (1100.0, f"is below {USUAL}"),  # under the range but not under 75 percent of the median: below, not "fair"
+    (700.0, f"looks suspiciously low, well below {USUAL}, so be careful")])
+def test_price_line_names_fair_high_below_or_suspiciously_low_with_the_range_and_source(price, word):
     text = fair_band.price_line({"lines": [line(price=price)]}, lookup=lambda sku: BAND)
-    assert f"RTX 5070 Ti at ${price:,.2f} {word} against $1,170 to $1,430 (dated price history, 2026-10-25, bestbuy.com)." in text
+    assert f"RTX 5070 Ti at ${price:,.2f} {word} (dated price history, 2026-10-25, bestbuy.com)." in text
+    assert "looks fair against" not in text
     assert text.startswith("Price check (advice only, it never changes the ranking):")
 
 
@@ -99,13 +107,16 @@ def test_price_line_is_silent_without_a_band_or_for_open_box_and_never_changes_t
 
 
 def test_pulse_band_is_used_when_market_pulse_publishes_one(monkeypatch):
-    mod = SimpleNamespace(fair_band=lambda sku: {"low": 1100, "high": 1200, "source": "x", "as_of": "2026-10-25T00:00:00Z",
-                                                 "source_url": "https://pulse.example/band"})
+    mod = SimpleNamespace(fair_band=lambda sku: {"low": 1100.0, "median": 1150.0, "high": 1200.0, "n": 12, "as_of": "2026-10-25",
+                                                 "source": "Tiger Data price_obs", "source_url": "https://pulse.example/band",
+                                                 "origin": "MIRROR"})  # the shape of PR #458's agents/pulse/fair_band.py
     monkeypatch.setitem(sys.modules, "pulse.fair_band", mod)
     import pulse
     monkeypatch.setattr(pulse, "fair_band", mod, raising=False)
     text = fair_band.price_line({"lines": [line(price=1239.0)]})
-    assert "looks high against $1,100 to $1,200 (Market Pulse fair band, 2026-10-25, pulse.example)" in text
+    assert "looks high, above the usual range of $1,100 to $1,200 (Market Pulse fair band, 2026-10-25, pulse.example)" in text
+    mod.fair_band = lambda sku: None  # Pulse has no dated data: the dated baseline answers instead
+    assert "dated price history" in fair_band.price_line({"lines": [line(price=1239.0)]})
 
 
 def test_without_pulse_the_dated_baseline_band_is_used_and_matches_the_advocate_tolerance():
