@@ -1,10 +1,17 @@
 """a4/a5 pure hunt rules: goal states, step-event throttle, retry, quote TTL, payment settle. No I/O."""
 import re
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
 
 from uagents_core.contrib.protocols.payment import RejectPayment, RequestPayment
 
 import payment
+
+_REPO = str(Path(__file__).resolve().parents[2])
+if _REPO not in sys.path:  # repo root, for data.* (added once, at import)
+    sys.path.insert(0, _REPO)
+from data.mirror.not_partners import orderable  # noqa: E402  (#333: a store that never joined is never orderable)
 
 THROTTLE_S = 600  # one step event per class per goal per 10 minutes
 EVENTS = ("deal found", "bid in", "veto", "progress to goal")
@@ -30,13 +37,13 @@ def command(text: str):
 def pick_best(bids: list[dict], cards: dict, eligible_suppliers: set[str]) -> int | None:
     """1-based index of the winning bid, or None. Vetoed bids never win. Among the rest, a bid offering a
     different condition than asked ("spec" warning) only wins if nothing else is left; then "buy" beats
-    "caution"; then the lower price."""
+    "caution"; then the lower price. A bid from a mirrored store that never joined never wins (#333)."""
     def rank(nb):
         card = cards.get(nb[1]["id"], {})
         kinds = {w["kind"] for w in card.get("warnings", [])}
         return ("spec" in kinds, card.get("recommendation") != "buy", nb[1]["total_landed_price"])
     ok = [(n, b) for n, b in enumerate(bids, 1)
-          if b.get("supplier_id") in eligible_suppliers
+          if b.get("supplier_id") in eligible_suppliers and orderable(b)
           and cards.get(b["id"], {}).get("recommendation") != "veto"]
     return min(ok, key=rank)[0] if ok else None
 

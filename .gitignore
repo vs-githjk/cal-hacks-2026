@@ -42,3 +42,6 @@ agents/.state.sqlite3
 agents/.state.sqlite3-journal
 agents/.state.sqlite3-wal
 agents/.state.sqlite3-shm
+
+# a minted Apify agent token when .env cannot be written (data/claim_check/agent_pay.py, #354)
+.agent_pay_token.*
