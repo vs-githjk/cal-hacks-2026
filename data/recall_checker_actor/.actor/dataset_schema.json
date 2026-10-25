@@ -1,0 +1,192 @@
+{
+ "actorSpecification": 1,
+ "fields": {
+  "type": "object",
+  "properties": {
+   "id": {
+    "type": "string",
+    "description": "Product id in this run"
+   },
+   "brand": {
+    "type": "string",
+    "description": "Brand searched"
+   },
+   "product": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "Product as given"
+   },
+   "upc": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "UPC as given (digits only; several codes are separated by commas)"
+   },
+   "status": {
+    "type": "string",
+    "description": "recalled (exact model or UPC), possible (same product line or product name, not this model), none, or unverified (no brand, no model, product line or product word, or the lookup failed; a size, a year or a spec word alone is never enough for none)"
+   },
+   "summary": {
+    "type": "string",
+    "description": "One line in plain words"
+   },
+   "recall_title": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "Top recall's title"
+   },
+   "recall_date": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "Top recall's date"
+   },
+   "recall_url": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "Top recall's page on cpsc.gov"
+   },
+   "hazard": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "What the hazard is"
+   },
+   "remedy": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "What to do"
+   },
+   "units": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "Units recalled, as CPSC states it"
+   },
+   "match_on": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "What matched: model, UPC, product line or product name"
+   },
+   "matches": {
+    "type": [
+     "array",
+     "null"
+    ],
+    "description": "Every recall that names this model or UPC"
+   },
+   "possible": {
+    "type": [
+     "array",
+     "null"
+    ],
+    "description": "Recalls of the same product line or product name: leads, not matches"
+   },
+   "checked_at": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "When the CPSC answer was read (UTC)"
+   },
+   "source_url": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "The CPSC API search"
+   },
+   "origin": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "MIRROR: a dated read of CPSC"
+   }
+  },
+  "required": [
+   "id",
+   "brand",
+   "status",
+   "summary"
+  ]
+ },
+ "views": {
+  "recalls": {
+   "title": "Recall checks",
+   "transformation": {
+    "fields": [
+     "product",
+     "brand",
+     "status",
+     "summary",
+     "recall_url",
+     "recall_date",
+     "hazard",
+     "remedy",
+     "units",
+     "match_on"
+    ]
+   },
+   "display": {
+    "component": "table",
+    "properties": {
+     "product": {
+      "label": "Product",
+      "format": "text"
+     },
+     "brand": {
+      "label": "Brand",
+      "format": "text"
+     },
+     "status": {
+      "label": "Status",
+      "format": "text"
+     },
+     "summary": {
+      "label": "Summary",
+      "format": "text"
+     },
+     "recall_url": {
+      "label": "Recall page",
+      "format": "link"
+     },
+     "recall_date": {
+      "label": "Recall date",
+      "format": "text"
+     },
+     "hazard": {
+      "label": "Hazard",
+      "format": "text"
+     },
+     "remedy": {
+      "label": "Remedy",
+      "format": "text"
+     },
+     "units": {
+      "label": "Units",
+      "format": "text"
+     },
+     "match_on": {
+      "label": "Matched on",
+      "format": "text"
+     }
+    }
+   }
+  }
+ }
+}

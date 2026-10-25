@@ -179,6 +179,7 @@ function DecisionCard({ e }: { e: MemoryEntry }) {
         <Reason e={e} reason={e.detail.reason} />
         <p className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-muted">
           Seller {text(e.seller_id)} · rule <Code>{text(e.detail.rule_id)}</Code>
+          {e.buyer_id === "" && <span>· not tied to a buyer</span>}
         </p>
         <p className="mt-1 text-[13px]">{url ? <SourceLink href={url} /> : <span className="text-muted">No source link recorded.</span>}</p>
       </Card>
@@ -266,7 +267,7 @@ export function RecentPurchases() {
           {rows.map((e) => (
             <li key={e.id} className="flex flex-wrap items-baseline justify-between gap-x-3">
               <span className="text-[18px] font-semibold tabular-nums">{amountLabel(e.detail)}</span>
-              <span className="min-w-0 break-words text-[13px] text-muted">{text(e.detail.payee)} · {when(e)}</span>
+              <span className="flex min-w-0 flex-wrap items-center gap-2 break-words text-[13px] text-muted">{text(e.detail.payee)} · {when(e)} <OriginChip origin={e.origin} /> no real money</span>
             </li>
           ))}
         </ul>

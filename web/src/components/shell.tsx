@@ -1,7 +1,6 @@
 "use client";
 // The header and the run mode footer for every page.
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
@@ -17,29 +16,10 @@ const NAV: { href: string; label: string; match?: string }[] = [
   { href: "/seller/seller-a", label: "Seller", match: "/seller" },
 ];
 
-/** Header: mark, pill nav and market status. Also lights card borders under the pointer. */
+/** Header: mark, pill nav and market status. */
 export function AppHeader() {
   const path = usePathname();
   const conn = useSpacetimeDB();
-  // One listener for the whole app: the card under the pointer gets --mx and --my for its lit border.
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    let last: HTMLElement | null = null;
-    const move = (e: PointerEvent) => {
-      const card = (e.target as Element | null)?.closest?.(".card") as HTMLElement | null;
-      if (last && last !== card) {
-        last.style.removeProperty("--mx");
-        last.style.removeProperty("--my");
-      }
-      last = card;
-      if (!card) return;
-      const r = card.getBoundingClientRect();
-      card.style.setProperty("--mx", `${e.clientX - r.left}px`);
-      card.style.setProperty("--my", `${e.clientY - r.top}px`);
-    };
-    window.addEventListener("pointermove", move, { passive: true });
-    return () => window.removeEventListener("pointermove", move);
-  }, []);
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-glass backdrop-blur-md">
@@ -64,7 +44,7 @@ export function AppHeader() {
           })}
         </div>
         <span className="hidden items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-muted md:flex">
-          <span className={`h-2 w-2 rounded-full ${conn.isActive ? "bg-ink shadow-[0_0_10px_var(--ink)]" : "border border-ink bg-transparent"}`} aria-hidden />
+          <span className={`h-2 w-2 rounded-full ${conn.isActive ? "bg-ink" : "border border-ink bg-transparent"}`} aria-hidden />
           {conn.isActive ? "market live" : "offline"}
         </span>
       </nav>

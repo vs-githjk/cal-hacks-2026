@@ -165,7 +165,7 @@ export function selectMemory(entries: readonly MemoryEntry[], kind: MemoryKind |
  * the producer writes those against the seller (bands only), so they carry no buyer id by design.
  */
 export function memoryForBuyer(entries: readonly MemoryEntry[], buyerId: string): MemoryEntry[] {
-  return buyerId ? entries.filter((e) => e.buyer_id === buyerId || (e.kind === "lesson" && e.buyer_id === "")) : [];
+  return buyerId ? entries.filter((e) => e.buyer_id === buyerId || ((e.kind === "lesson" || e.kind === "veto") && e.buyer_id === "")) : [];
 }
 
 /** The veto's source as a link, only when it is a real web address. */
@@ -178,5 +178,5 @@ export function paymentModeLabel(m: PurchaseDetail["payment_mode"]): string {
 }
 
 export function approvalLabel(method: string): string {
-  return ({ voice_code: "Approved by phone code", allowance: "Within allowance", sim_script: "Scripted SIM approval", none: "No approval method recorded" } as Record<string, string>)[method] ?? "Unavailable";
+  return ({ voice_code: "Approved by phone code", allowance: "Within allowance", sim_script: "Scripted SIM approval", typed_code: "Typed code (retired)", none: "No approval method recorded" } as Record<string, string>)[method] ?? "Unavailable";
 }

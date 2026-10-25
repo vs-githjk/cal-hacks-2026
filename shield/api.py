@@ -21,6 +21,7 @@ from shield.rules import RULES
 
 
 MAX_BODY_BYTES = 64 * 1024  # larger request bodies get 413; callers must treat any non-200 as block
+_DEFAULT_RECEIPT_KEY = object()
 
 
 class BodyLimit:
@@ -65,16 +66,22 @@ class BodyLimit:
 
 
 def create_app(keys: Optional[Mapping] = None, store: Optional[NonceStore] = None,
-               registry: Optional[Registry] = None) -> FastAPI:
+               registry: Optional[Registry] = None, receipt_private_key=_DEFAULT_RECEIPT_KEY) -> FastAPI:
     keys = service.keys_from_env() if keys is None else keys
     store = service.store_from_env() if store is None else store
     registry = service.registry_from_env() if registry is None else registry
+    if receipt_private_key is _DEFAULT_RECEIPT_KEY:
+        receipt_private_key = service.receipt_private_key_from_env()
     app = FastAPI(title="Bazaar Shield", version=VERSION)
     app.add_middleware(BodyLimit)
 
     @app.post("/v1/shield/screen")
     def screen_route(payload: dict[str, Any] = Body(...)):
         return service.handle_screen(payload)
+
+    @app.post("/v1/shield/screen-payment")
+    def screen_payment_route(payload: dict[str, Any] = Body(...)):
+        return service.handle_screen_payment(payload, registry, receipt_private_key)
 
     @app.post("/screen", include_in_schema=False)
     def screen_alias(payload: dict[str, Any] = Body(...)):

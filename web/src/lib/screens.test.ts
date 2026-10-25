@@ -1,9 +1,10 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows } from "./screens.ts";
+import type { Timestamp } from "spacetimedb";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows, shieldFromRows, vetoFromRows } from "./screens.ts";
 
-const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as any;
+const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
 
 const result = (over: Record<string, unknown> = {}) => ({
@@ -217,4 +218,62 @@ test("allowanceForBuyer: only the paired buyer's own spending rule, else none", 
   assert.equal(allowanceForBuyer(rows, "buyer-c"), null);
   assert.equal(allowanceForBuyer(rows, ""), null);
   assert.equal(allowanceForBuyer([], "buyer-a"), null);
+});
+
+test("#191 a ranked row the referee held back (advocate caution) shows as held back with its reason, never as the winner", () => {
+  const held = "held back: advocate caution (fit.unconfirmed: card length not on the listing)";
+  const rows = [
+    result({ id: 1n, bidId: "bid-bb", sellerId: "best-buy", persona: "Best Buy", rank: 1, landed: 1299.99 }),
+    result({ id: 2n, bidId: "bid-eb", sellerId: "ebay-235887", persona: "eBay seller", rank: 2, landed: 1036.99, reasons: [held] }),
+  ];
+  const bids = bidsFromRows(rows, [], "round-1");
+  const eb = bids.find((b) => b.seller === "eBay seller")!;
+  assert.equal(eb.heldBack, held);
+  assert.equal(eb.won, false);
+  assert.deepEqual(bids.filter((b) => b.won).map((b) => b.seller), ["Best Buy"]);
+  const lines = linesFromRows(rows, [], round());
+  assert.deepEqual(lines.find((l) => l.seller === "eBay seller")!.outcome, { kind: "held", rank: 2, note: held });
+});
+
+// #191-5: live veto, Shield, approval and receipt cards from my_bid_checks and my_deals (shapes from module_bindings, SIM fixtures).
+const check = (over: Record<string, unknown> = {}) => ({
+  id: 1n, bidId: "bid-bb", roundId: "round-1", sellerId: "bargain-bin", persona: "Bargain Bin Hardware", bidOrigin: "SIM", kind: "advocate",
+  result: "veto", detail: "fit.gpu_length: 336 mm card, your case allows 305 mm", evidenceUrl: "https://bargainbin.example.test/5070ti", origin: "SIM", at: ts(T0), ...over,
+});
+const deal = (over: Record<string, unknown> = {}) => ({
+  mandateHash: "abcdef0123456789", mandateId: "mdt-1", dealId: "round-1:bid-a", amount: 1299.99, payee: "best-buy", expiry: ts(T0 + 600_000),
+  withinAllowance: false, origin: "SIM", approvalMethod: "", voiceApprovalId: "", approvedAt: undefined, paymentRef: "", paymentMode: "", paidAt: undefined, ...over,
+});
+
+test("#191-5 the latest advocate veto in the round becomes the veto card, with the false claim, rule, source and landed price", () => {
+  const checks = [check({ id: 1n, kind: "claim", result: "false", detail: "BRAND NEW, factory sealed", evidenceUrl: "https://x.test/p" }), check({ id: 2n })];
+  const v = vetoFromRows(checks, [result({ bidId: "bid-bb", landed: 1199 })], "round-1")!;
+  assert.deepEqual({ ...v, checkedAt: undefined }, {
+    seller: "Bargain Bin Hardware", origin: "SIM", landed: 1199, claim: "BRAND NEW, factory sealed", finding: "336 mm card, your case allows 305 mm",
+    ruleId: "fit.gpu_length", sourceUrl: "https://bargainbin.example.test/5070ti", checkedAt: undefined, checkOrigin: "SIM",
+  });
+  assert.equal(vetoFromRows([check({ result: "buy" })], [], "round-1"), null);
+  assert.equal(vetoFromRows(checks, [], "round-2"), null);
+});
+
+test("#191-5 a Shield block becomes the Shield card with its rule ids; fields the market does not store stay absent", () => {
+  const s = shieldFromRows([check({ kind: "shield", result: "block", detail: "shield.payee.swap, shield.hidden.instruction", evidenceUrl: "", origin: "LIVE" })], "round-1")!;
+  assert.equal(s.verdict, "block");
+  assert.deepEqual(s.ruleIds, ["shield.payee.swap", "shield.hidden.instruction"]);
+  assert.equal(s.verdictOrigin, "LIVE");
+  assert.equal(s.chars, undefined);
+  assert.deepEqual(s.evidence, []);
+  assert.equal(shieldFromRows([check({ kind: "shield", result: "allow", detail: "" })], "round-1"), null);
+});
+
+test("#191-5 my_deals: approval shows only once the call approved it, the receipt only once paid", () => {
+  assert.deepEqual(dealFromRows([deal()], 250), { approval: null, receipt: null });
+  const approved = dealFromRows([deal({ approvalMethod: "voice_code", voiceApprovalId: "va-1", approvedAt: ts(T0 + 1000) })], 250);
+  assert.equal(approved.approval!.attempts[0]!.label, "Approved on the call");
+  assert.equal(approved.receipt, null);
+  const paid = dealFromRows([deal({ approvalMethod: "voice_code", voiceApprovalId: "va-1", approvedAt: ts(T0 + 1000), paymentRef: "ch_sim_1", paymentMode: "sim", paidAt: ts(T0 + 2000) })], 250);
+  assert.equal(paid.receipt!.chargeId, "ch_sim_1");
+  assert.equal(paid.receipt!.chargeStatus, "SIM stub, no money moved");
+  assert.equal(paid.receipt!.amount, 1299.99);
+  assert.equal(paid.receipt!.seller, "best-buy");
 });

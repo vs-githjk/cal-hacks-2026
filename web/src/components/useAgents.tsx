@@ -3,12 +3,15 @@
 // is subscribed and pauses while the tab is hidden, so two views never double the traffic or disagree about a row.
 
 import { useState, useSyncExternalStore } from "react";
-import { POLL_MS, fetchAgents, type AgentRow } from "@/lib/agentFeed";
+import { AGENTS, AGENTVERSE_URL } from "@/lib/agents";
+import { FEED_ENV, POLL_MS, feedBase, fetchAgents, type AgentRow } from "@/lib/agentFeed";
 
-/** rows: undefined while the first poll is pending, null when the feed is offline (no stale rows are kept). now: when it was read. */
+/** rows: undefined while the first poll is pending, null when the feed is offline (no stale rows are kept). now: when it was read.
+ * noFeed: no reachable feed is configured for this page, so views show the Agentverse profiles rather than "offline". */
 export interface AgentsState {
   rows: AgentRow[] | null | undefined;
   now: number;
+  noFeed?: boolean;
 }
 
 const INITIAL: AgentsState = { rows: undefined, now: 0 };
@@ -20,9 +23,15 @@ function startPolling() {
   let stop = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const ctl = new AbortController();
+  const base = feedBase(FEED_ENV, window.location.hostname);
+  if (!base) {
+    state = { rows: null, now: Date.now(), noFeed: true };
+    queueMicrotask(() => listeners.forEach((l) => l()));
+    return () => {};
+  }
   const tick = async () => {
     if (!document.hidden) {
-      const rows = await fetchAgents(ctl.signal);
+      const rows = await fetchAgents(base, ctl.signal);
       if (stop) return;
       state = { rows, now: Date.now() };
       listeners.forEach((l) => l());
@@ -68,5 +77,21 @@ export function AgentAvatar({ row, size = 28 }: { row: AgentRow; size?: number }
     <span aria-hidden style={box} className="inline-flex shrink-0 items-center justify-center rounded-full bg-soft text-[12px] font-semibold text-muted">
       {row.name.trim().charAt(0).toUpperCase() || "?"}
     </span>
+  );
+}
+
+/** Shown when this page has no reachable feed (a deployed site): the six published Agentverse profiles, with no status claimed. */
+export function AgentProfiles({ className = "" }: { className?: string }) {
+  return (
+    <ul className={`divide-y divide-line ${className}`}>
+      {AGENTS.map((a) => (
+        <li key={a.key} className="flex items-center gap-2 py-1">
+          <span className="min-w-0 flex-1 truncate font-semibold">{a.name}</span>
+          <a href={AGENTVERSE_URL(a.address)} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline">
+            Agentverse profile
+          </a>
+        </li>
+      ))}
+    </ul>
   );
 }
