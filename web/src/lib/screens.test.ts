@@ -433,7 +433,7 @@ test("buyerKpis: review, goal state, allowance and purchases", () => {
 });
 
 test("feedFromRows with a scope drops events of another buyer's goal", () => {
-  const evs = [event({ id: 1n, kind: "goal_set", refTable: "goal", refId: "goal-mine", label: "A buyer set a goal" }), event({ id: 2n, kind: "goal_set", refTable: "goal", refId: "goal-other", label: "A buyer set a goal" })];
+  const evs = [event({ id: 1n, kind: "bid_sealed", refTable: "goal", refId: "goal-mine", label: "A buyer set a goal" }), event({ id: 2n, kind: "bid_sealed", refTable: "goal", refId: "goal-other", label: "A buyer set a goal" })];
   const all = feedFromRows(evs, []);
   const scoped = feedFromRows(evs, [], new Set(["goal-mine"]));
   assert.equal(scoped.length, all.length - 1);
