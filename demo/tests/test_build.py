@@ -113,7 +113,7 @@ def test_each_reducer_is_called_by_the_role_it_demands(tmp_path):
     r, out, m, *_ = run_build(tmp_path=tmp_path)
     allowed = {"post_goal": "buyer", "post_need": "buyer", "set_allowance": "referee", "open_round": "referee", "close_round": "referee",
                "attach_verdict": "referee", "attach_advocate_card": "referee", "create_mandate": "referee", "record_approval": "referee",
-               "record_payment": "referee"}
+               "record_payment": "referee", "issue_build_approval_code": "referee", "clear_build_approval_code": "referee"}
     for who, reducer, _ in m.log:
         if reducer in ("set_floor", "place_bid"):
             assert who.startswith("seller:")
