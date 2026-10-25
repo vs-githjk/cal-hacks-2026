@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Card, Code, Label, OriginChip } from "@/components/ui";
+import { Card, Code, Label, OriginChip, RecordedBanner, RunsLocally } from "@/components/ui";
+import recorded from "@/lib/fixtures/sell-recorded.json";
+import { useApiBase } from "@/lib/useApiBase";
 import {
-  CONDITIONS, buildConfig, emptyForm, emptyRow, fetchNeeds, fetchShops, slugify, submitConfig,
+  CONDITIONS, SELLER_KIT_URL, buildConfig, emptyForm, emptyRow, fetchNeeds, fetchShops, parseNeeds, parseShops, slugify, submitConfig,
   type Created, type FieldError, type ListingRow, type OpenNeed, type SellForm, type ShopRow,
 } from "@/lib/sellerKit";
 
@@ -30,6 +32,10 @@ export default function SellPage() {
   const [created, setCreated] = useState<Created | null>(null);
   const [shops, setShops] = useState<ShopRow[] | null>(null);
   const [needs, setNeeds] = useState<OpenNeed[] | null>(null);
+  const kit = useApiBase(SELLER_KIT_URL);
+  // the hosted site shows the recorded SIM snapshot (#398); locally, what the kit answers
+  const shownShops = kit.local ? parseShops(recorded.shops) : shops;
+  const shownNeeds = kit.local ? parseNeeds(recorded.needs) : needs;
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     const [s, n] = await Promise.all([fetchShops(signal), fetchNeeds(signal)]);
@@ -40,12 +46,13 @@ export default function SellPage() {
   }, []);
 
   useEffect(() => {
+    if (!kit.base) return; // not hydrated yet, or the hosted site: the Seller Kit runs locally, so never fetch 127.0.0.1
     const ctl = new AbortController();
     // refresh() sets state only after an await, so this is not a synchronous cascade
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh(ctl.signal);
     return () => ctl.abort();
-  }, [refresh]);
+  }, [kit.base, refresh]);
 
   const set = <K extends keyof SellForm>(k: K, v: SellForm[K]) => setForm((f) => ({ ...f, [k]: v }));
   const setRow = (i: number, patch: Partial<ListingRow>) =>
@@ -90,6 +97,16 @@ export default function SellPage() {
         </p>
       </header>
 
+      {kit.local ? (
+        <>
+        <RecordedBanner at={recorded.recorded_at} />
+        <RunsLocally what="The Seller Kit">
+          It checks your shop and writes a config file that your own seller agent runs from, on your machine. This hosted page cannot reach it,
+          so the form is not shown and nothing here is sent anywhere. Below is what the kit answered when it was recorded.
+        </RunsLocally>
+        </>
+      ) : (
+      <>
       {offline && (
         <Card stripe="coral">
           <p className="font-medium">Seller Kit offline.</p>
@@ -231,6 +248,8 @@ export default function SellPage() {
           </button>
         </div>
       </form>
+      </>
+      )}
 
       {created && (
         <Card stripe="mint">
@@ -266,13 +285,13 @@ export default function SellPage() {
 
       <Card>
         <Label>Shops written so far</Label>
-        {shops === null ? (
+        {shownShops === null ? (
           <p className="text-muted">{offline ? "Seller Kit offline." : "Loading..."}</p>
-        ) : shops.length === 0 ? (
+        ) : shownShops.length === 0 ? (
           <p className="text-muted">None yet.</p>
         ) : (
           <ul className="grid gap-2">
-            {shops.map((s) => (
+            {shownShops.map((s) => (
               <li key={s.id} className="text-[14px]">
                 <strong>{s.name}</strong> <OriginChip origin={s.origin} />{" "}
                 <span className="text-muted">
@@ -286,13 +305,13 @@ export default function SellPage() {
 
       <Card>
         <Label>Open needs you could bid on</Label>
-        {needs === null ? (
+        {shownNeeds === null ? (
           <p className="text-muted">{offline ? "Seller Kit offline." : "Loading..."}</p>
-        ) : needs.length === 0 ? (
+        ) : shownNeeds.length === 0 ? (
           <p className="text-muted">No open needs.</p>
         ) : (
           <ul className="grid gap-2">
-            {needs.map((n) => (
+            {shownNeeds.map((n) => (
               <li key={n.id} className="text-[14px]">
                 {n.quantity} x <strong>{n.sku_spec}</strong>{" "}
                 <span className="text-muted">

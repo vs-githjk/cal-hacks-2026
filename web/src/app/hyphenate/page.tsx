@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HyphenateScreen } from "@/components/hyphenate";
-import { POLL_MS, fetchSnapshot, loadMoment, type Snapshot } from "@/lib/hyphenate";
+import { HYPHENATE_URL, POLL_MS, fetchSnapshot, loadMoment, parseSnapshot, type Snapshot } from "@/lib/hyphenate";
+import recorded from "@/lib/fixtures/hyphenate-recorded.json";
+import { useApiBase } from "@/lib/useApiBase";
 
 /** Hyphenate: the purchasing and AP seats. Reads the local API (:8789) every few seconds; when it is down the page says so and shows no rows. */
 export default function HyphenatePage() {
@@ -10,6 +12,8 @@ export default function HyphenatePage() {
   const [state, setState] = useState<"loading" | "offline" | "ready">("loading");
   const [loadingMoment, setLoadingMoment] = useState(false);
   const abort = useRef<AbortController | null>(null);
+  const api = useApiBase(HYPHENATE_URL);
+  const recordedSnapshot = useMemo(() => parseSnapshot(recorded.raw), []);
 
   const refresh = useCallback(async () => {
     abort.current?.abort();
@@ -22,6 +26,7 @@ export default function HyphenatePage() {
   }, []);
 
   useEffect(() => {
+    if (!api.base) return; // not hydrated yet, or the hosted site: Hyphenate runs locally, so never fetch 127.0.0.1
     // refresh() only sets state after an await, so the first fetch is not a synchronous cascade
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
@@ -30,7 +35,7 @@ export default function HyphenatePage() {
       clearInterval(t);
       abort.current?.abort();
     };
-  }, [refresh]);
+  }, [api.base, refresh]);
 
   const onLoadMoment = useCallback(async () => {
     setLoadingMoment(true);
@@ -39,5 +44,7 @@ export default function HyphenatePage() {
     setLoadingMoment(false);
   }, [refresh]);
 
+  if (api.local) // the hosted site: the recorded SIM snapshot, labelled, never a fetch to 127.0.0.1 (#398)
+    return <HyphenateScreen state={recordedSnapshot ? "ready" : "local"} snapshot={recordedSnapshot} recordedAt={recorded.recorded_at} />;
   return <HyphenateScreen state={state} snapshot={snapshot} onLoadMoment={onLoadMoment} loadingMoment={loadingMoment} />;
 }
