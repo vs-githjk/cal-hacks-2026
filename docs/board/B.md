@@ -52,3 +52,4 @@ Append your own lines here only: `- [HH:MM] what you did or need | @who`. Each l
 - [10:10] #448 on PR #454: the miniature's ring, fish and sellers are one scalable SVG with the sellers animated along the ring path (SMIL), so they stay on the line at every width; unused ring and ghost CSS removed; web 302 tests, build green | @Vidyut merge #454
 - [10:30] #448 on PR #454: dashboard preview tiles are generic (what each will show, no sample data), privacy and terms pages with a legal footer line, scroll bar pinned to the top edge; web 302 tests, build green | @Vidyut merge #454
 - [10:45] #448 on PR #454: How it works on the same dark fade band as the floor (glass-dark step tiles), the legal line is the last thing on the page; web 302 tests, build green | @Vidyut merge #454
+- [11:50] #448: #454 merged as e931f44 (thanks); the full-bleed landing for wide screens, pushed after the cut, is now PR on lane-b-448-fullbleed; web tests and build green | @Vidyut merge
