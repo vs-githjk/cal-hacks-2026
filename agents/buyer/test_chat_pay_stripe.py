@@ -20,49 +20,24 @@ from test_runtime_checkout import (CodeCapturingContext, FakeVoiceClient, _wire_
 
 
 class PayWorld(MarketWorld):
-    """MarketWorld plus the payment reducers: record_payment is referee-only and writes the payment once, settle_goal is the
-    buyer's and needs that payment; the buyer's own row then shows the payment and the settlement."""
+    """MarketWorld (referee-only reducers; the referee reads agent_approvals and agent_payments; no my_purchase_status and no
+    settle_goal, as on main's module) with two faults to inject."""
 
-    def __init__(self, **kw):
-        super().__init__(**kw)
-        self.payments, self.settled, self.skew_after_approval, self.fail_settle = {}, {}, False, False
+    @property
+    def skew_after_approval(self):
+        return self.approved_by_override is not None
 
-    def client(self, role):
-        base, world = super().client(role), self
+    @skew_after_approval.setter
+    def skew_after_approval(self, on):
+        self.approved_by_override = "someone-else" if on else None  # the market's own row names another approver
 
-        class Client:
-            identity = base.identity
+    @property
+    def fail_settle(self):
+        return self.fail_record_payment
 
-            def call(self, reducer, **a):
-                if reducer == "record_payment":
-                    world.calls.append((role, reducer, dict(a)))
-                    if role != "referee":
-                        raise RuntimeError(f"record_payment needs referee; caller is {role} vidyut")
-                    if a["mandate_hash"] not in world.approvals:
-                        raise RuntimeError("no approved mandate with that hash")
-                    if a["mandate_hash"] in world.payments:
-                        raise RuntimeError("this mandate is already paid")
-                    world.payments[a["mandate_hash"]] = a
-                elif reducer == "settle_goal":
-                    world.calls.append((role, reducer, dict(a)))
-                    if role != "buyer" or world.fail_settle or a["mandate_hash"] not in world.payments:
-                        raise RuntimeError("settle_goal refused")
-                    world.settled[a["mandate_hash"]] = a
-                else:
-                    base.call(reducer, **a)
-
-            def sql(self, query):
-                rows = base.sql(query)
-                h = re.search(r"mandate_hash = '([0-9a-f]+)'", query).group(1)
-                if rows and h in world.approvals and world.skew_after_approval:
-                    rows[0]["amount"] = rows[0]["amount"] + 1.0  # the market's own row no longer matches the mandate
-                if rows and h in world.payments:
-                    p = world.payments[h]
-                    rows[0].update(paymentRef={"some": p["payment_ref"]}, paymentAmount={"some": p["amount"]},
-                                   paymentMode={"some": p["mode"]}, paidAt={"some": "2026-10-25T10:01:00Z"},
-                                   settled=h in world.settled)
-                return rows
-        return Client()
+    @fail_settle.setter
+    def fail_settle(self, on):
+        self.fail_record_payment = on  # the market refuses record_payment after the charge
 
 
 class FakeStripe:
@@ -110,12 +85,13 @@ def test_approve_then_charge_then_receipt_in_chat(runtime):
     assert req["amount_cents"] == 58200 and req["currency"] == "USD" and req["key"] == "mandate:" + h
     assert req["metadata"] == {"deal_id": DEAL, "mandate_hash": h, "origin": "SIM"} and h != tx["mandate"]["hash"]
     # the market: approval first, then the payment recorded by the referee and the goal settled by the buyer
-    names = [r for _role, r, _a in world.calls if r in {"record_approval", "record_payment", "settle_goal"}]
-    assert names == ["record_approval", "record_payment", "settle_goal"]
-    assert world.roles("record_payment") == ["referee"] and world.roles("settle_goal") == ["buyer"]
+    names = [r for _role, r, _a in world.calls if r in {"record_approval", "record_payment", "set_goal_state", "settle_goal"}]
+    assert names == ["record_approval", "record_payment", "set_goal_state"]  # main's module has no settle_goal
+    assert world.roles("record_payment") == ["referee"] and world.roles("set_goal_state") == ["referee"]
     assert world.payments[h]["payment_ref"] == "pi_test_1" and world.payments[h]["mode"] == "stripe_test"
-    assert world.payments[h]["amount"] == LANDED and h in world.settled
-    assert world.settled[h]["deal_id"] == tx["deal_id"] and world.settled[h]["payment_ref"] == "pi_test_1"
+    assert world.payments[h]["amount"] == LANDED
+    (goal_state,) = world.goal_states
+    assert goal_state["goal_id"] == tx["goal_id"] and goal_state["state"] == "DONE" and "pi_test_1" in goal_state["text"]
     # the durable state and the goal
     stored = state.load_transaction(db, tx["deal_id"], tx["buyer_id"])
     assert stored["phase"] == "settled" and stored["payment_ref"] == "pi_test_1" and stored["order"]["status"] == "paid"
@@ -133,6 +109,9 @@ def test_approve_then_charge_then_receipt_in_chat(runtime):
     assert texts[0].startswith("Fresh quote saved for deal") and re.search(r"One-time approval code: [a-z]+ [a-z]+", texts[1])
     assert "Approval confirmed for deal" in texts[2] and len(texts) == 4  # quote, code, approval, then ONE receipt message (ASI:One 429s)
     assert any(isinstance(m, buyer.common.OrderPlaced) for _to, m in ctx.sent)
+    # only what main's module has: referee views and reducers, never my_purchase_status or settle_goal
+    assert world.queries and all(re.search(r"FROM agent_(approvals|payments|buyer_contact) ", q) for q in world.queries)
+    assert not any("my_purchase_status" in q for q in world.queries) and "settle_goal" not in [r for _ro, r, _a in world.calls]
 
 
 def test_a_denied_call_charges_nothing(runtime):
@@ -147,9 +126,9 @@ def test_a_denied_call_charges_nothing(runtime):
 def test_a_market_readback_mismatch_charges_nothing(runtime):
     buyer, db = runtime
     world = PayWorld()
-    world.skew_after_approval = True  # the buyer's own row disagrees with the mandate after the referee recorded
+    world.skew_after_approval = True  # the market's own approval row names another approver than the mandate's buyer
     ctx, stripe = _approve_and_pay(buyer, world)
-    assert stripe.requests == [] and not world.payments and not world.settled
+    assert stripe.requests == [] and not world.payments and not world.goal_states
     assert buyer.ROUND["phase"] == "uncertain" and buyer.ROUND["pending_hold"] is True
     assert "Paid in Stripe" not in " ".join(owner_texts(ctx)) and state.load_owned_parts(db, "owner") == []
 
@@ -194,7 +173,7 @@ def test_a_stripe_failure_gives_no_receipt_no_payment_record_and_no_memory(runti
     buyer, db = runtime
     world = PayWorld()
     ctx, stripe = _approve_and_pay(buyer, world, stripe=FakeStripe(fail=True))
-    assert len(stripe.requests) == 1 and not world.payments and not world.settled
+    assert len(stripe.requests) == 1 and not world.payments and not world.goal_states
     assert buyer.ROUND["transaction"]["phase"] == "uncertain" and buyer.ROUND["pending_hold"] is True
     assert "no receipt exists" in owner_texts(ctx)[-1] and "Paid in Stripe" not in owner_texts(ctx)[-1]
     assert state.load_owned_parts(db, "owner") == [] and buyer.ROUND["transaction"].get("payment_ref") is None
@@ -206,7 +185,7 @@ def test_a_charged_purchase_the_market_cannot_settle_stays_held_and_is_not_remem
     world.fail_settle = True
     ctx, stripe = _approve_and_pay(buyer, world)
     tx, h = buyer.ROUND["transaction"], _market_hash(buyer)
-    assert len(stripe.requests) == 1 and tx["payment_ref"] == "pi_test_1" and h in world.payments and not world.settled
+    assert len(stripe.requests) == 1 and tx["payment_ref"] == "pi_test_1" and h not in world.payments and not world.goal_states
     assert buyer.ROUND["phase"] == "uncertain" and buyer.ROUND["pending_hold"] is True and tx["phase"] == "submitted"
     assert "Paid in Stripe test mode. Receipt pi_test_1." in owner_texts(ctx)[-1] and "stays held" in owner_texts(ctx)[-1]
     assert state.load_owned_parts(db, "owner") == []

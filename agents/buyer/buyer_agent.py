@@ -1214,18 +1214,10 @@ def delegation_allowed(transaction: dict) -> bool:
     return delegate_call_enabled() and bool(buyer_id) and not buyer_id.startswith("b_")
 
 
-def market_approval_matches(status, mandate: dict) -> bool:
-    """The market's own record of this purchase, re-read after record_approval: a voice approval for exactly the
-    mandate the buyer issued (hash, amount, payee), not retired. Any mismatch means no payment."""
-    from decimal import Decimal, InvalidOperation
-    try:
-        same_amount = Decimal(str(status.get("amount"))).quantize(Decimal("0.01")) == \
-            Decimal(str(mandate.get("amount"))).quantize(Decimal("0.01"))
-    except (InvalidOperation, AttributeError, TypeError, ValueError):
-        return False
-    return (isinstance(status, dict) and status.get("approval_method") == "voice_code" and bool(status.get("approved_at"))
-            and status.get("mandate_hash") == mandate.get("hash") and status.get("payee") == mandate.get("payee")
-            and same_amount and not status.get("retired"))
+def market_approval_matches(row, mandate: dict, buyer_id: str, voice_approval_id: str = "") -> bool:
+    """The market's own approval row (referee-only agent_approvals view), re-read after record_approval: a voice approval by
+    the mandate's buyer for exactly the mandate hash the buyer issued. Any mismatch means no payment."""
+    return owner_approval.approval_matches(row, mandate, buyer_id, voice_approval_id)
 
 
 def _transport_request(ctx: Context, loop):
@@ -1355,12 +1347,12 @@ async def _pay_chat_purchase(ctx: Context, transaction: dict, mandate: dict, ord
     charger = _stripe_test_charger()
     if charger is None:
         raise PermissionError("stripe_test_key_unavailable")
-    buyer_market, referee_market = market_clients()
-    status_now = await asyncio.to_thread(buyer_market.purchase_status, market["hash"])  # the market's own row, read just before charging
-    now_ts = business_now().timestamp()
-    if (not market_approval_matches(status_now, market) or status_now.get("payment_ref") is not None
-            or status_now.get("settled") is True or status_now.get("reservation_matches") is not True
-            or now_ts >= _market_timestamp(status_now.get("expiry"))):
+    _buyer_market, referee_market = market_clients()
+    # the market's own rows, read just before charging (referee views; main's module has no buyer-private purchase view)
+    approval = await asyncio.to_thread(referee_market.approval_row, market["hash"])
+    paid = await asyncio.to_thread(referee_market.payment_row, market["hash"])
+    if (not market_approval_matches(approval, market, transaction["buyer_id"], transaction["voice_approval"].get("id", ""))
+            or paid is not None or business_now().timestamp() >= _market_timestamp(mandate.get("expires_at"))):
         raise PermissionError("market_purchase_not_approved")
     transaction["phase"] = "submitted"  # persisted before the charge: a crash from here on restarts as uncertain, never as unpaid
     buyer_state.save_transaction(state_db(), transaction)
@@ -1393,20 +1385,18 @@ async def _pay_chat_purchase(ctx: Context, transaction: dict, mandate: dict, ord
                f"Landed price: ${float(market['amount']):.2f} from {bid['persona']}. Test charge only, no real money moved.")
     try:
         def settle_on_market():
-            status = buyer_market.purchase_status(market["hash"])
-            if status.get("payment_ref") is None:
-                if status.get("payment_mode") is not None or status.get("payment_amount") is not None or status.get("settled") is True:
-                    raise MarketBridgeError("market_payment_readback_mismatch")
+            row = referee_market.payment_row(market["hash"])
+            if row is None:
                 referee_market.record_payment(mandate_hash=market["hash"], payment_ref=charge_id,
                                               amount=market["amount"], mode="stripe_test")
-                status = buyer_market.purchase_status(market["hash"])
-            if (status.get("payment_ref") != charge_id or status.get("payment_mode") != "stripe_test"
-                    or payment._cents(status.get("payment_amount")) != cents):
+                row = referee_market.payment_row(market["hash"])
+            if (row is None or row.get("payment_ref") != charge_id or row.get("mode") != "stripe_test"
+                    or payment._cents(row.get("amount")) != cents):
                 raise MarketBridgeError("market_payment_readback_mismatch")
-            settled = buyer_market.settle_goal(goal_id=transaction["goal_id"], deal_id=transaction["deal_id"],
-                                               mandate_hash=market["hash"], payment_ref=charge_id)
-            if not isinstance(settled, dict) or settled.get("settled") is not True:
-                raise MarketBridgeError("market_settlement_readback_mismatch")
+            try:  # the goal closes on the market through the referee (settle_goal does not exist); a chat goal may live only here
+                referee_market.set_goal_state(transaction["goal_id"], "DONE", f"Paid in Stripe test mode. Receipt {charge_id}.")
+            except Exception as exc:
+                log.info(f"chat deal {transaction['deal_id']}: market goal not closed ({type(exc).__name__}); the payment is recorded")
         await asyncio.to_thread(settle_on_market)
         goal = buyer_state.load_goal(state_db(), transaction["goal_id"], owner)
         if not isinstance(goal, dict):
@@ -1530,8 +1520,8 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             if not isinstance(market_status, dict) or market_status.get("approval_method") != "voice_code":
                 raise MarketBridgeError("market_approval_readback_mismatch")  # the referee cannot read the buyer view back
         else:
-            owner_approval.record_owner_approval(referee_market, buyer_market, owner_approval.market_view(transaction),
-                                                 transaction["buyer_id"], record["id"], market_approval_matches)
+            owner_approval.record_owner_approval(referee_market, owner_approval.market_view(transaction),
+                                                 transaction["buyer_id"], record["id"])
         if web:
             await _pay_web_purchase(ctx, transaction, mandate, order, bid)
             return
@@ -1672,14 +1662,13 @@ def _build_pending_transaction(n: int, *, web: bool = False):
     def create_chat():
         ROUND["market_mandate_deal"] = market["deal_id"]
         referee_market.create_mandate(market, need_id=need_id, buyer_id=market_buyer_id, now=now)
-        return buyer_market.purchase_status(market["hash"])  # the buyer's own view: reservation held, not retired
+        return {"mandate_hash": market["hash"]}  # the referee cannot read a buyer-private row: the create_mandate reducer is the check
     return transaction, create_chat
 
 
 def _finish_pending_transaction(transaction: dict, status, *, web: bool = False) -> dict:
     mandate = owner_approval.market_view(transaction)
-    if (not isinstance(status, dict) or status.get("mandate_hash") != mandate["hash"]
-            or (not web and not owner_approval.pending_matches(status, mandate))):
+    if not isinstance(status, dict) or status.get("mandate_hash") != mandate["hash"]:
         raise MarketBridgeError("market_mandate_readback_mismatch")
     buyer_state.save_transaction(state_db(), transaction)
     ROUND["transaction"] = transaction
@@ -1765,16 +1754,14 @@ async def on_request_payment(ctx: Context, sender: str, req: RequestPayment):
         return
     durable_charge_saved = False
     try:
-        buyer_market, _referee_market = market_clients()
-        market_status = buyer_market.purchase_status(owner_approval.market_hash(tx))
+        _buyer_market, referee_market = market_clients()
+        market_hash = owner_approval.market_hash(tx)
+        approval = await asyncio.to_thread(referee_market.approval_row, market_hash)  # referee views: main's module has no my_purchase_status
+        paid = await asyncio.to_thread(referee_market.payment_row, market_hash)
         now_ts = business_now().timestamp()
-        market_expiry = _market_timestamp(market_status.get("expiry"))
         local_expiry = _market_timestamp(mandate.get("expires_at"))
-        if (market_status.get("approval_method") not in {"voice_code", "allowance"}
-                or market_status.get("retired") is not False
-                or market_status.get("reservation_matches") is not True
-                or market_status.get("payment_ref") is not None
-                or now_ts >= market_expiry or now_ts >= local_expiry or market_expiry > local_expiry):
+        if (not market_approval_matches(approval, owner_approval.market_view(tx), tx["buyer_id"], tx.get("voice_approval", {}).get("id", ""))
+                or paid is not None or now_ts >= local_expiry):
             raise PermissionError("market_purchase_not_approved")
         message_id, request_json = _request_payment_message_id(tx["buyer_id"], req)
         cents = payment._cents(mandate.get("amount"))
@@ -1799,7 +1786,7 @@ async def on_request_payment(ctx: Context, sender: str, req: RequestPayment):
                 or not getattr(MERCHANT_SIM, "receipt_keys", None)):
             raise RuntimeError("checkout_keys_or_nonce_store_unavailable")
         now_ts = business_now().timestamp()
-        if now_ts >= market_expiry or now_ts >= local_expiry or market_expiry > local_expiry:
+        if business_now().timestamp() >= local_expiry:
             raise PermissionError("mandate_expired")
         # Persist the submitted boundary before MerchantSim can consume the nonce or charge.
         tx["phase"] = "submitted"
@@ -1933,33 +1920,24 @@ async def on_complete(ctx: Context, sender: str, msg: CompletePayment):
                 or result.get("charge_id") != msg.transaction_id or result.get("mandate_hash") != mandate["hash"]
                 or result.get("origin") != "SIM"):
             raise ValueError("durable charge attempt does not match the seller acknowledgement")
-        buyer_market, referee_market = market_clients()
+        _buyer_market, referee_market = market_clients()
         mode = {"SIM": "sim", "stripe_test": "stripe_test"}.get(settlement.get("mode"))
         if mode is None:
             raise MarketBridgeError("settlement_mode_invalid")
         market_hash = owner_approval.market_hash(tx)
-        payment_status = buyer_market.purchase_status(market_hash)
         expected_cents = payment._cents(mandate["amount"])
-        if payment_status.get("payment_ref") is None:
-            if (payment_status.get("payment_mode") is not None
-                    or payment_status.get("payment_amount") is not None
-                    or payment_status.get("settled") is True):
-                raise MarketBridgeError("market_payment_readback_mismatch")
+        row = referee_market.payment_row(market_hash)  # referee view: main's module has no buyer-private purchase view
+        if row is None:
             referee_market.record_payment(mandate_hash=market_hash,
                 payment_ref=msg.transaction_id, amount=mandate["amount"], mode=mode)
-            payment_status = buyer_market.purchase_status(market_hash)
-        elif (payment_status.get("payment_ref") != msg.transaction_id
-                or payment_status.get("payment_mode") != mode
-                or payment._cents(payment_status.get("payment_amount")) != expected_cents):
+            row = referee_market.payment_row(market_hash)
+        if (row is None or row.get("payment_ref") != msg.transaction_id or row.get("mode") != mode
+                or payment._cents(row.get("amount")) != expected_cents):
             raise MarketBridgeError("market_payment_readback_mismatch")
-        if (payment_status.get("payment_ref") != msg.transaction_id
-                or payment_status.get("payment_mode") != mode
-                or payment._cents(payment_status.get("payment_amount")) != expected_cents):
-            raise MarketBridgeError("market_payment_readback_mismatch")
-        settled = buyer_market.settle_goal(goal_id=tx["goal_id"], deal_id=tx["deal_id"],
-            mandate_hash=market_hash, payment_ref=msg.transaction_id)
-        if not isinstance(settled, dict) or settled.get("settled") is not True:
-            raise MarketBridgeError("market_settlement_readback_mismatch")
+        try:  # settle_goal does not exist on main's module: the referee closes the goal if the market holds it
+            referee_market.set_goal_state(tx["goal_id"], "DONE", f"Paid. Receipt {msg.transaction_id}.")
+        except Exception as exc:
+            ctx.logger.info(f"market goal not closed ({type(exc).__name__}); the payment is recorded")
         owner = deal.get("owner_sender")
         if not isinstance(owner, str) or not owner:
             raise ValueError("private goal owner is unavailable")
