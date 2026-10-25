@@ -2,6 +2,7 @@
 // Small shared pieces. Every color comes from tokens.css; no literal colors here.
 import type { ReactNode } from "react";
 import { formatMoney } from "@/lib/money";
+import { recordedLine } from "@/lib/recorded";
 import { safeUrl } from "@/lib/url";
 
 export type Origin = "LIVE" | "MIRROR" | "SIM";
@@ -45,6 +46,37 @@ export function Card({ children, className = "", stripe, hero, tactile }: { chil
 /** Small uppercase section label. Headings inside cards are this, never a big heading; the big thing is the number. */
 export function Label({ children }: { children: ReactNode }) {
   return <h2 className="mb-3 text-[15px] font-semibold text-ink">{children}</h2>;
+}
+
+export const README_URL = "https://github.com/vs-githjk/cal-hacks-2026#readme";
+
+/** A part of Tech Bazaar that only runs on your own machine, seen from the hosted site (#398): says so and links the README. The page fetches nothing. */
+export function RunsLocally({ what, children }: { what: string; children: ReactNode }) {
+  return (
+    <Card>
+      <p className="text-[18px] font-medium">{what} runs locally.</p>
+      <p className="mt-1 text-muted">{children}</p>
+      <p className="mt-3 text-[14px]">
+        <a className="font-medium underline underline-offset-2" href={README_URL} target="_blank" rel="noreferrer">
+          See the README
+        </a>{" "}
+        to run it on your own machine.
+      </p>
+    </Card>
+  );
+}
+
+/** The banner over a recorded snapshot on the hosted site (#398): SIM, when it was captured, and where the live version runs. */
+export function RecordedBanner({ at }: { at: string }) {
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[10px] border border-line bg-panel px-3 py-2.5 text-[13px] text-ink-2">
+      <OriginChip origin="SIM" />
+      <span>{recordedLine(at)}</span>
+      <a className="font-medium underline underline-offset-2" href={README_URL} target="_blank" rel="noreferrer">
+        See the README
+      </a>
+    </p>
+  );
 }
 
 /** A card for something with no recorded source yet. Says so plainly; never fills the gap with a sample. */
