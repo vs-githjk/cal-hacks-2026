@@ -11,9 +11,9 @@ import { serviceStatuses, type ServiceStatus } from "@/lib/runMode";
 
 const NAV: { href: string; label: string; match?: string }[] = [
   { href: "/", label: "Overview" },
+  { href: "/floor", label: "Floor" },
   { href: "/buyer", label: "Buyer" },
   { href: "/market", label: "Market" },
-  { href: "/floor", label: "Floor" },
   { href: "/seller/seller-a", label: "Seller", match: "/seller" },
 ];
 

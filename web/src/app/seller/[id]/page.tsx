@@ -48,7 +48,8 @@ function PooledLot() {
   const [needs] = useTable(tables.sellerNeeds);
   return (
     <Card>
-      <Label>Pooled lot · what sellers see</Label>
+      <Label>Pooled lot</Label>
+      <p className="mb-2.5 text-[13px] text-muted">What every seller sees before bidding.</p>
       {needs.length === 0 ? (
         <p className="text-muted">No open request right now. When a buyer posts a need, it shows here as SKU, quantity, ceiling band and deadline only.</p>
       ) : (

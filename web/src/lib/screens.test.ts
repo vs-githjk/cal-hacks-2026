@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, recentRounds, reviewFromRows, roundFromRows, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -64,6 +64,17 @@ test("bidsFromRows ranks 1, 2, then unranked; filters to the round; the advocate
 test("latestRound picks the most recently opened round", () => {
   assert.equal(latestRound([round({ id: "r1" }), round({ id: "r2", openedAt: ts(T0 + 1) })])!.id, "r2");
   assert.equal(latestRound([]), undefined);
+});
+
+test("recentRounds lists closed rounds newest first with the winner; open rounds are left out", () => {
+  const open = round({ id: "r-open", state: "open", closedAt: undefined });
+  const closed = round({ id: "r-closed", sealedCount: 3, closedAt: ts(T0 + 9000) });
+  const out = recentRounds([open, closed] as never, [result({ roundId: "r-closed" })] as never, []);
+  assert.equal(out.length, 1);
+  assert.equal(out[0]!.id, "r-closed");
+  assert.equal(out[0]!.bids, 3);
+  assert.equal(out[0]!.winner!.seller, "Fair Price PC (SIM)");
+  assert.equal(out[0]!.winner!.landed, 1289);
 });
 
 test("roundFromRows reads the window from the round_opened label and lists arrivals in time order", () => {

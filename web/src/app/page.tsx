@@ -3,9 +3,9 @@
 import { useMemo } from "react";
 import { useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
-import { OriginChip, Label, clock } from "@/components/ui";
+import { OriginChip, Label, clock, money } from "@/components/ui";
 import { Question } from "@/components/arena";
-import { asOrigin, latestRound } from "@/lib/screens";
+import { asOrigin, latestRound, recentRounds } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
 const PARTS = ["GPU", "CPU", "Motherboard", "RAM", "SSD", "Cooler"];
@@ -28,6 +28,7 @@ export default function Home() {
       { label: "floor events", value: events.length, origin: "SIM" },
     ];
   }, [r, results, events]);
+  const recent = useMemo(() => recentRounds(rounds, results, events), [rounds, results, events]);
   const ticker = useMemo(() => [...events].sort((a, b) => (a.id < b.id ? 1 : -1)).slice(0, 14), [events]);
 
   return (
@@ -59,6 +60,31 @@ export default function Home() {
           ))}
         </dl>
       </section>
+
+      {recent.length > 0 && (
+        <section aria-label="Recent rounds" className="card p-4">
+          <div className="[&>h2]:mb-2">
+            <Label>Recent rounds</Label>
+          </div>
+          <ul className="divide-y divide-line">
+            {recent.map((x) => (
+              <li key={x.id} className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-4 py-2 text-[13.5px]">
+                <span className="tabular-nums text-muted">{clock(x.closedAt)}</span>
+                <span className="min-w-0 truncate">
+                  <span className="text-ink">{x.id}</span> <span className="text-muted">{x.bids} {x.bids === 1 ? "bid" : "bids"}</span> <OriginChip origin={x.origin} />
+                </span>
+                {x.winner ? (
+                  <span className="whitespace-nowrap">
+                    <span className="font-medium text-ink">{x.winner.seller}</span> <OriginChip origin={x.winner.origin} /> <span className="tabular-nums">{money(x.winner.landed)}</span>
+                  </span>
+                ) : (
+                  <span className="text-muted">no winner</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {ticker.length > 0 && (
         <section aria-label="Latest floor events" className="overflow-hidden rounded-lg bg-canvas-2 py-2.5">
