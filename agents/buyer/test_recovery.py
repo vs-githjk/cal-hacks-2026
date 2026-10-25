@@ -815,12 +815,25 @@ def test_plain_owner_text_does_not_replace_saved_chat_context(buyer):
 
 
 def test_tell_logs_no_private_reply_body(buyer):
+    """The only log line that carries a reply is the chat feed's AGENT_CHAT line, and it is exactly this, fully masked.
+    The owner check is the real one (_chat_sender_allowed, the pinned owner from the fixture), not patched."""
+    import re
+    assert buyer._chat_sender_allowed('owner') and not buyer._chat_sender_allowed('agent1qstranger')
     ctx = Context()
     private_body = 'approval code 482913 under $800 seller payload private'
     asyncio.run(buyer.tell(ctx, 'owner', private_body))
-    logged = '\n'.join(str(call) for call in ctx.logger.method_calls)
+    calls = [str(call) for call in ctx.logger.method_calls]
+    chat = [c for c in calls if 'AGENT_CHAT' in c]
+    assert len(chat) == 1
+    line = next(c.args[0] for c in ctx.logger.info.call_args_list if c.args and 'AGENT_CHAT' in str(c.args[0]))
+    expected = r'AGENT_CHAT at=\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+00:00 who=buyer kind=message text="approval code \\u2022\\u2022\\u2022\\u2022 under \$800 seller payload private"'
+    assert re.fullmatch(expected, line), line
+    logged = '\n'.join(c for c in calls if 'AGENT_CHAT' not in c)
     assert private_body not in logged
     assert '482913' not in logged and '$800' not in logged and 'seller payload' not in logged
+    stranger = Context()
+    asyncio.run(buyer.tell(stranger, 'agent1qstranger', private_body))
+    assert not [c for c in stranger.logger.method_calls if 'AGENT_CHAT' in str(c)]
 
 
 def test_start_round_stops_before_old_summary_after_final_send_is_superseded(multi_sender, buyer, monkeypatch):

@@ -15,6 +15,7 @@ from uagents import Agent, Context, Model, Protocol
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))         # agents/, for common
 sys.path.insert(1, str(Path(__file__).resolve().parents[2]))         # the repo root, for pay/
+import chatlog  # noqa: E402
 import common  # noqa: E402
 from caller import explain, relay  # noqa: E402
 from caller.relay import market_has_typed_approval  # noqa: E402
@@ -48,6 +49,7 @@ def screen_sink():
     referee = Market(token_file=token)
 
     def show(code: str, mandate_hash: str) -> None:
+        chatlog.hide(code)  # the chat feed must never show the code words
         referee.call("issue_approval_code", mandate_hash=mandate_hash, code=code)
     return show
 
@@ -92,9 +94,11 @@ async def on_call(ctx: Context, sender: str, msg: CallRequest):
         sink = None
     mandate_hash = request["mandate"].get("hash") if isinstance(request["mandate"], dict) else None
     show = (lambda code: sink(code, mandate_hash)) if sink else None
+    chatlog.emit(ctx.logger, "caller", "thinking", "Calling the owner's phone for the approval")
     out = await asyncio.to_thread(relay.handle, sender, request, buyer_address=common.address("buyer"), client=client,
                                   show_code=show, seen=SEEN, unconfigured=unconfigured, secret=env.get(vc.SECRET_ENV),
                                   buyer_name=env.get(vc.NAME_ENV) or "there", expires_at=msg.expires_at)
+    chatlog.emit(ctx.logger, "caller", "done", "Approval call finished: " + ("approved." if out["approved"] else "not approved."))
     ctx.logger.info(f"approval call for {str(mandate_hash)[:12]}: {'approved' if out['approved'] else 'not approved'}")
     await ctx.send(sender, CallResult(approved=out["approved"], reason=out["reason"] or "", call_id=out["call_id"] or "",
                                       voice_approval_id=out["voice_approval_id"] or ""))

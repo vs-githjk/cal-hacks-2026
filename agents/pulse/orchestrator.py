@@ -41,6 +41,7 @@ for _p in (str(ROOT), str(ROOT / "agents")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+from agents import chatlog  # noqa: E402
 from agents.crs import CACHE_MAX_AGE  # noqa: E402
 from agents.pulse import coaching  # noqa: E402
 from agents.pulse import fair_band as FB  # noqa: E402
@@ -854,6 +855,7 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
         verdict = common.screen(str(msg.msg_id), sender, msg.text())
         text = (pulse.answer(msg.text(), allowed(sender), seller_of(sender)) if verdict.get("verdict") == "allow"
                 else "Smell Test blocked this message. No action taken.")
+        chatlog.emit(getattr(ctx, "logger", None), "pulse", "message", text)   # our own fixed-phrase answer, never the asker's words
         await ctx.send(sender, ChatMessage(content=[TextContent(text=text)]))
 
     @chat.on_message(ChatAcknowledgement)
@@ -876,6 +878,8 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
             ctx.logger.warning(f"round not read: {e if isinstance(e, PulseError) else 'bad json'}")
             return
         await ctx.send(sender, PulseNotes(notes_json=json.dumps(result["seller_notes"])))
+        for n in result["seller_notes"][:6]:   # what Pulse told each losing seller to change: our own fixed phrase, no prices of the buyer
+            chatlog.emit(ctx.logger, "pulse", "message", f"{n.get('seller_id')}: {n.get('what_to_change')}")
         try:   # the next round's buyers read a fresh market: publish the pulse for the parts this round priced
             pulse.publish_before_round([t["sku"] for t in result["buyer_trends"]])
         except Exception:  # noqa: BLE001

@@ -24,6 +24,7 @@ import common
 import crs
 import hunt
 import payment
+import chatlog
 import status
 import state as buyer_state
 from market_bridge import MarketBridge, MarketBridgeError
@@ -360,6 +361,8 @@ async def announce(ctx: Context):
 
 
 async def tell(ctx: Context, to: str, text: str):
+    if _chat_sender_allowed(to):  # the owner's own conversation only; the sign-up reply to a stranger is never a chat line
+        chatlog.emit(ctx.logger, "buyer", "message", text)
     if to == WEB:
         WEB_OUTBOX.append(text)
     else:
@@ -512,6 +515,7 @@ async def handle_text(ctx: Context, sender: str, text: str):
             ctx.logger.info(f"OWNER_PIN_CANDIDATE sender={sender}")
             await tell(ctx, sender, STRANGER_REPLY)
         return
+    chatlog.emit(ctx.logger, "owner", "message", text)  # past the owner check above: a stranger's text never reaches the chat feed
     if sender == ROUND.get("owner") and (hunt.command(text) or ("",))[0] == "approve":
         await tell(ctx, sender, "Approval happens on a phone call, not in chat. Nothing was approved or ordered.")
         return
@@ -609,6 +613,7 @@ async def handle_text(ctx: Context, sender: str, text: str):
                  attempts=0, last_sent={}, retired_need_ids=retired_need_ids, market_goal_posted=False,
                  received_bids={})
     log_msg(ctx, "owner", "buyer", "goal")
+    chatlog.emit(ctx.logger, "buyer", "thinking", "Reading your goal")
     out = skip_lines(goal, owned) + heard.notes + dup_notes
     if not need["items"]:
         set_state("DONE")
@@ -977,6 +982,7 @@ async def tick(ctx: Context):
         advice_need = advice_need_for(ROUND["need"], owned_attrs(ROUND["owned"]), ROUND["bids"])
         token, need_id = ROUND.get("round_token"), ROUND.get("need", {}).get("id")
         log_msg(ctx, "buyer", "advocate", "advice_request")
+        chatlog.emit(ctx.logger, "buyer", "thinking", "Asking the Advocate to review the bids")
         try:
             await ctx.send(common.address("advocate"), common.AdviceRequest(
                 need_json=json.dumps(advice_need), bids_json=json.dumps(review_bids)))
@@ -1180,6 +1186,7 @@ async def _phone_approval(transaction: dict, send_private, client, service, buye
     web = _is_web_buyer(buyer_id, (transaction.get("deal") or {}).get("owner_sender"))
 
     def on_code(code: str) -> None:
+        chatlog.hide(code)  # the chat feed must never show the code words
         try:  # every buyer: the market shows the code on /buyer. Never log the code.
             owner_approval.remember_code(owner_approval.market_hash(transaction), code)  # memory only, for record_approval
             market_clients()[1].issue_approval_code(owner_approval.market_hash(transaction), code)
@@ -1282,6 +1289,7 @@ async def _delegated_approval(ctx: Context, transaction: dict, send_private, dir
     from buyer.delegate import DelegatedVoiceClient
     delegated = DelegatedVoiceClient(transaction["mandate"]["hash"], _transport_request(ctx, asyncio.get_running_loop()),
                                      USED_CALL_IDS)
+    chatlog.emit(ctx.logger, "buyer", "thinking", "Waiting on your approval call")
     result = await _phone_approval(transaction, send_private, delegated, service, buyer_name)
     if result.approved or not (delegated.transport_failed or delegated.refused):
         return result
@@ -1496,7 +1504,9 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
         if delegation_allowed(transaction) and not web:
             result = await _delegated_approval(ctx, transaction, send_private, client, _approval_service(), buyer_name)
         else:
+            chatlog.emit(ctx.logger, "buyer", "thinking", "Waiting on your approval call")
             result = await _phone_approval(transaction, send_private, client, _approval_service(), buyer_name)
+        chatlog.emit(ctx.logger, "buyer", "done", "Approval call finished: " + ("approved." if result.approved else "not approved."))
         if not result.approved or not isinstance(result.record, dict) or result.record.get("channel") != "phone":
             transaction["phase"] = "denied" if result.record and result.record.get("result") == "denied" else "paused"
             if web and transaction["phase"] == "paused":
