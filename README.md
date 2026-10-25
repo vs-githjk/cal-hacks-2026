@@ -66,7 +66,7 @@ Smell Test is the screening layer of Fish Market and also a standalone API: any 
 | Route | What it does |
 |---|---|
 | `POST /v1/shield/screen` | Screens one agent-to-agent message (a listing, a bid, a seller reply) for prompt injection, payee swaps and other attacks. Returns `allow`, `quarantine` or `block`, the rule ids that fired, the evidence spans and the latency |
-| `POST /v1/shield/verify-agent` | Checks a sender's agent address against an allowlist of registered agents (`shield/registry.json`). An address that is not listed is quarantined as unregistered. The registry is demo data, labelled SIM: our own agents and two simulated sellers |
+| `POST /v1/shield/verify-agent` | Checks a sender's agent address against an allowlist of registered agents (`shield/registry.json`). An address that is not listed is quarantined as unregistered. The registry is demo data, labelled SIM: a partial list of our agents (buyer, Advocate, Byte Bros, FlashDeal Frankie, one retired seller) and two simulated liar-page sellers. Smell Test, Caller, Market Pulse, ReNew Refurb and Central Comp MIRROR are not listed, so they would be quarantined as unregistered |
 | `POST /v1/shield/verify-mandate` | Verifies a signed payment request (Visa TAP wire format) against its mandate: key, signature, expected amount and payee, and a nonce store so a replayed request fails |
 | `POST /v1/shield/screen-payment` | Screens a payment request and can return a signed allow receipt. Built and tested; not on the live web purchase (see Known limits) |
 | `GET /v1/shield/rules` | The published rule list: id, action, severity and a plain description for every rule |
@@ -128,7 +128,7 @@ Smell Test stops 30 of 30 on its development set, but its rules were written aga
 
 | Sponsor | What we use | Where | Status |
 |---|---|---|---|
-| Fetch.ai | uAgents, Agentverse, ASI:One, Agent Chat Protocol, Payment Protocol, ASI:One Gmail connector | `agents/` | LIVE: nine agents, eight registered on Agentverse with mailboxes (Central Comp MIRROR runs locally), plus one retired seller profile ([agents/README.md](agents/README.md)) |
+| Fetch.ai | uAgents, Agentverse, ASI:One, Agent Chat Protocol, Payment Protocol, ASI:One Gmail connector | `agents/` | LIVE: nine agents, five registered on Agentverse with mailboxes (checked Oct 23); Caller, Market Pulse, ReNew Refurb and Central Comp MIRROR run locally, and the first three have no verified Agentverse mailbox. One retired seller profile is also listed ([agents/README.md](agents/README.md)) |
 | Cartesia | Voice agent, outbound calls, dynamic variables, call transcripts | `pay/voice_cartesia.py` | LIVE |
 | Apify | Store Actors for listing mirrors, plus five Actors of our own | `data/mirror/`, `data/*actor*` | LIVE: four public on the Store, one private |
 | Bright Data | Scraper API, the live price re-check before the call | `demo/recheck.py`, `data/baselines/brightdata.py` | built, env-gated |
@@ -148,18 +148,18 @@ Public data: the CPSC recalls API and [docyx/pc-part-dataset](https://github.com
 
 <!-- VIDEO: fetch -->
 
-Nine agents, each with one job. Eight are registered on Agentverse with a mailbox so ASI:One can reach them; Central Comp MIRROR runs locally on purpose. Addresses are the ones the running agents print at start (`.run/logs/`).
+Nine agents, each with one job. Five are registered on Agentverse with a mailbox so ASI:One can reach them (public profiles checked Oct 23). Caller, Market Pulse and ReNew Refurb run locally and their Agentverse mailboxes are not yet verified; Central Comp MIRROR runs locally on purpose. Addresses are the ones the running agents print at start (`.run/logs/`).
 
 | Agent | Job | ASI:One handle | Agentverse address | Status |
 |---|---|---|---|---|
 | Fish Market Buyer | Takes goals in ASI:One, remembers owned parts, runs the sealed round, asks for approval before any payment. Answers only its owner | @techbazaarbuyer | `agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8` | Registered |
 | Fish Market Quality Advocate | Checks fit, claims and recalls; at most 3 cited warnings; can veto the cheapest bid; never sees the fee | @techbazaaradvocate | `agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05` | Registered |
 | Fish Market Smell Test | Chat front door to Smell Test screening; makes no purchases | @techbazaarshield | `agent1q0m2z43cf3hg4cfy87hatf69ulyqkvuylm6mjv53e6y05weqmhjj6k4lknp` | Registered |
-| Fish Market Caller | Places the one approval call for a mandate; approves and charges nothing itself | @techbazaarcaller | `agent1qgc59kdxpacnnt93z3t6e4mrzue52zx2k049d2psmrm5uwwunj9qj9juwhs` | Registered |
-| Market Pulse | Answers price-trend and seller-record questions from Tiger Data, the CRS cache and finished rounds | @techbazaarpulse | `agent1qfarjhu5ca8d9mry8arcxrldex6zj5v0ec5qzys2wsfe5stl447fclahxe4` | Registered |
+| Fish Market Caller | Places the one approval call for a mandate; approves and charges nothing itself | @techbazaarcaller | `agent1qgc59kdxpacnnt93z3t6e4mrzue52zx2k049d2psmrm5uwwunj9qj9juwhs` | Runs locally; Agentverse mailbox not yet verified |
+| Market Pulse | Answers price-trend and seller-record questions from Tiger Data, the CRS cache and finished rounds | @techbazaarpulse | `agent1qfarjhu5ca8d9mry8arcxrldex6zj5v0ec5qzys2wsfe5stl447fclahxe4` | Runs locally; Agentverse mailbox not yet verified |
 | Byte Bros Outlet | Seller that learns: a loss report's gap becomes a price step, never below its floor | @techbazaarseller1 | `agent1qd3gvg54tsaezed0wzpgg34rza4y6kvvfd778nj6h27j20k99d38zd3et9m` | Registered |
 | FlashDeal Frankie | Seller that lies: its bid says new, its page says open box, and the Advocate vetoes it (SIM, planted) | @techbazaarseller3 | `agent1qdcrmqy2ra2tvshq2qhc8q5rvqzpr7du77st32qynwazy48gtuvyspdm26l` | Registered |
-| ReNew Refurb | Seller that bundles refurbished and open-box lines, with the condition on every line | @techbazaarseller5 | `agent1qffyrngsr3tgdd2mv5rkskvw066tc29msavd2kmze34q5as3czv72nxn0ru` | Registered |
+| ReNew Refurb | Seller that bundles refurbished and open-box lines, with the condition on every line | @techbazaarseller5 | `agent1qffyrngsr3tgdd2mv5rkskvw066tc29msavd2kmze34q5as3czv72nxn0ru` | Runs locally; Agentverse mailbox not yet verified |
 | Central Comp MIRROR | Bids a real San Francisco store's dated listings for comparison; never ordered or paid | none | `agent1qtfc6j2rtcs9ukj0y2jn4cdkk8gdxmzxwttln99t08shhwcjt9gfw69ny4h` | Runs locally, no Agentverse mailbox |
 
 Ports and start flags: [agents/README.md](agents/README.md). The public profiles of six of these agents were last verified through the Agentverse API on Oct 23.

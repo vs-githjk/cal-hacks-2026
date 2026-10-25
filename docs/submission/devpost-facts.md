@@ -1,6 +1,6 @@
 # Devpost facts sheet: Fish Market
 
-For whoever writes the Devpost page (Anoop). Every line below was checked against `main` at commit 279eb879 on Sun Oct 25, 2026, 05:30 PDT. Each claim names the file, test or command behind it. If a line says "confirm", it is not proven from the repository and someone must check it before it goes on the page. Wording rules: Fish Market is the product, "Smell Test" is the screening agent, no em or en dashes, never "secure" as a claim, never "Visa settles", never "used by" for the Actors.
+For whoever writes the Devpost page (Anoop). Every line below was checked on Sun Oct 25, 2026, 05:30 PDT against a branch cut from `main` at commit 279eb879; later merges to `main` are not re-checked. Each claim names the file, test or command behind it. If a line says "confirm", it is not proven from the repository and someone must check it before it goes on the page. Wording rules: Fish Market is the product, "Smell Test" is the screening agent, no em or en dashes, never "secure" as a claim, never "Visa settles", never "used by" for the Actors.
 
 ## One-liner
 
@@ -36,7 +36,7 @@ An LLM never decides pay, veto or rank. Claude only reads the goal and rewords s
 | Sponsor | What it does in Fish Market | Proof (file) | Status to state |
 |---|---|---|---|
 | Fetch.ai uAgents | Nine agents: Buyer, Quality Advocate, Smell Test, Caller, Market Pulse, Byte Bros Outlet, FlashDeal Frankie, ReNew Refurb, Central Comp MIRROR. Each has one job | `agents/` (`agents/buyer/buyer_agent.py`, `agents/advocate/advocate_agent.py`, `agents/caller/caller_agent.py`, `agents/pulse/orchestrator.py`, `agents/sellers/seller_agent.py`) | LIVE code |
-| Fetch.ai Agentverse | Eight agents registered with mailboxes; Central Comp MIRROR runs locally on purpose (its log says no mailbox). Addresses are in the README table | `README.md` agent table, `agents/README.md`, `.run/logs/*.log` | Eight registered per the team; the public profile check by API was last run Oct 23 for six agents. Confirm the Caller, Market Pulse and ReNew Refurb profiles show Active before submitting |
+| Fetch.ai Agentverse | Nine agents; five are registered with mailboxes (Buyer, Quality Advocate, Smell Test, Byte Bros Outlet, FlashDeal Frankie). Caller, Market Pulse and ReNew Refurb run locally with no verified Agentverse mailbox; Central Comp MIRROR runs locally on purpose (its log says no mailbox). Addresses are in the README table | `README.md` agent table, `agents/README.md`, `.run/logs/*.log` | The public profile check by API (agents/README.md, Oct 23, 23:46 PDT) covered six addresses: these five plus the retired Silicon Sally. The Caller and Market Pulse logs show only failed mailbox connects. Do not say "registered" for Caller, Market Pulse or ReNew Refurb until their profiles are confirmed on the Agentverse dashboard |
 | Fetch.ai ASI:One | Front door: the owner types a goal in ASI:One chat, the buyer answers only its owner. Agent Chat Protocol and Payment Protocol are in the buyer. The receipt email is handed to ASI:One's Gmail connector | `agents/buyer/buyer_agent.py` (lines using `chat_protocol_spec`, `payment_protocol_spec`), `agents/buyer/post_purchase.py`, `agents/ISSUE14_EVIDENCE.md` | LIVE. A chat payment request is refused on purpose. Gmail connector: tested once live per the README; confirm |
 | Cartesia | Approval phone call above the allowance: reads the build, answers questions, code judges the transcript; also the narrator voice in the videos (Lauren, sonic-3) | `pay/voice_cartesia.py`, `pay/approval.py`, `pay/VOICE_ATTACKS.md`, `pay/tests/test_voice_attacks.py` | LIVE: real outbound call to the buyer's own phone. Rate capped: 1 per number per 5 min, 20 a day |
 | Anthropic Claude | Claude Haiku 5.5 reads the buyer's goal, rewords explanations (Advocate, Smell Test, Market Pulse), and is an opt-in Smell Test classifier. Never decides money, a veto, a verdict or a rank | `agents/buyer/understand.py`, `agents/phrasing.py`, `shield/classifier.py` | Needs `ANTHROPIC_API_KEY`; without it the code's own sentence is used. Classifier off by default |
@@ -47,7 +47,7 @@ An LLM never decides pay, veto or rank. Claude only reads the goal and rewords s
 | SpacetimeDB | The shared market: sealed rounds, floors, rankings, mandates, approvals, goal states in reducers; every screen and agent reads the same state | `market/spacetimedb/src/market.ts`, `market/rules/` | LIVE on Maincloud, database `tech-bazaar` |
 | Tiger Data | Time-series store for bid prices and Market Pulse trends | `data/tiger/store.py`, `data/tiger/schema.sql`, `docs/changes/0500-D-tiger.md` | Built, env-gated, never on the money path. Confirm whether a live write is recorded |
 | Visa (TAP format) | Trusted Agent Protocol request signing (RFC 9421, Ed25519, nonce) verified against a port of Visa's reference verifier. Runs in the scripted reference run (`demo/run_demo.py`, beat 4) | `pay/tap.py`, `pay/merchant_sim.py`, `pay/tests/test_tap.py`, `pay/tests/test_tap_conformance.py` | Built and tested, not certified by Visa, and NOT on the live web purchase. Say "TAP wire format", never "Visa settles" |
-| Vercel | Hosts the web app at fishmarket.dev | `web/` | LIVE (Pro plan per Vidyut's Oct 24 decision) |
+| Vercel | Hosts the web app at fishmarket.dev | `web/` | LIVE (Pro plan per Vidyut's Oct 24 decision in the team's `plan/decisions.md`, outside this repository; confirm with Vidyut) |
 
 Coinbase is not entered.
 
@@ -92,7 +92,7 @@ Full table: `docs/REAL_VS_SIMULATED.md` (older) and the README table (current).
 
 ## Pricing line (for the pitch, not charged today)
 
-Vidyut approved on Oct 24 (`plan/decisions.md`): sellers pay 3% only on parts they win, the buyer keeps, capped at $25 a part, plus card processing at cost, about 5.9% all-in against Amazon at 8% and eBay at 13.6%. The competitor rates are not verified in this repository; confirm the sources before quoting.
+Vidyut approved on Oct 24 (LOCKED entry of 18:40 in the team's `plan/decisions.md`, which lives outside this repository, so confirm with Vidyut before quoting): sellers pay 3% only on parts they win, the buyer keeps, capped at $25 a part, plus card processing at cost, about 5.9% all-in against Amazon at 8% and eBay at 13.6%. The competitor rates are not verified in this repository; confirm the sources before quoting.
 
 ## Team
 
