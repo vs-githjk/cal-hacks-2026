@@ -197,7 +197,7 @@ def phrase(name: str, facts: str) -> str:
     try:
         text = _ask_model(name, facts)
         if (not text or len(text) > 600 or "http" in text.lower() or "@" in text and "@" not in facts
-                or not _numbers(text) <= _numbers(facts) or "—" in text or "–" in text):
+                or not _numbers(text) <= _numbers(facts) or chr(0x2014) in text or chr(0x2013) in text):
             return facts
         from shield.core import screen
         return text if screen(text, {"sender_role": "seller"}, classifier=None)["verdict"] == "allow" else facts
