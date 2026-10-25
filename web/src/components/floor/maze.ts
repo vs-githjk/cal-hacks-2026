@@ -71,3 +71,16 @@ export function heading(loop: readonly Tile[], k: number): number {
   }
   return -1;
 }
+
+/** Seller pocket characters, in seller order: seller i uses POCKET_IDS[i]. With 4 or fewer sellers only 1 to 4 are used (spread out). */
+export const POCKET_IDS = ["1", "2", "3", "4", "5", "6", "7", "8"] as const;
+
+/** Top-left tile of the first n x n block that has no wall in it, or null (a maze with no big empty areas). */
+export function emptyBlock(grid: readonly string[], n: number): Tile | null {
+  for (let r = 0; r + n <= grid.length; r++) for (let c = 0; c + n <= (grid[0]?.length ?? 0); c++) {
+    let open = true;
+    for (let i = 0; i < n && open; i++) for (let j = 0; j < n; j++) if (!isWalk(grid, r + i, c + j)) { open = false; break; }
+    if (open) return [r, c];
+  }
+  return null;
+}

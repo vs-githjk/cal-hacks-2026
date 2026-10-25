@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { MAZE, mazeWallPaths } from "./pixelArt.ts";
-import { adjacent, findTile, heading, isWalk, loopTile, mazePath, mod, patrolLoop, sameTile, type Tile } from "./maze.ts";
+import { CHECKER, MAZE, MAZE_ORIGIN, MAZE_TILE, PUFFER, REFEREE, REFEREE_UP, mazeWallPaths } from "./pixelArt.ts";
+import { POCKET_IDS, adjacent, emptyBlock, findTile, heading, isWalk, loopTile, mazePath, mod, patrolLoop, sameTile, type Tile } from "./maze.ts";
 
 const walkable: Tile[] = [];
 MAZE.forEach((row, r) => [...row].forEach((_, c) => { if (isWalk(MAZE, r, c)) walkable.push([r, c]); }));
@@ -13,8 +13,8 @@ test("maze rows are one width and fully walled at the border", () => {
   assert.ok(findTile(MAZE, "S"));
 });
 
-test("every pocket 1-5 has a closed patrol loop of 4 to 8 adjacent corridor tiles", () => {
-  for (const p of ["1", "2", "3", "4", "5"]) {
+test("every pocket 1-8 has a closed patrol loop of 4 to 8 adjacent corridor tiles", () => {
+  for (const p of POCKET_IDS) {
     const loop = patrolLoop(MAZE, p);
     assert.ok(loop.length >= 4 && loop.length <= 8, `pocket ${p} loop length ${loop.length}`);
     loop.forEach((t, i) => {
@@ -25,7 +25,10 @@ test("every pocket 1-5 has a closed patrol loop of 4 to 8 adjacent corridor tile
   }
 });
 
-test("patrolLoop is empty for a missing pocket", () => assert.deepEqual(patrolLoop(MAZE, "9"), []));
+test("patrolLoop is empty for a missing pocket and for the one-row winner pocket", () => {
+  assert.deepEqual(patrolLoop(MAZE, "0"), []);
+  assert.deepEqual(patrolLoop(MAZE, "9"), []);
+});
 
 test("mazePath: adjacent corridor steps, right ends, and the shortest length", () => {
   const start = findTile(MAZE, "S")!;
@@ -42,7 +45,7 @@ test("mazePath: adjacent corridor steps, right ends, and the shortest length", (
 test("mazePath: shortest equals a known Manhattan run on an open row and handles from === to", () => {
   assert.deepEqual(mazePath(MAZE, findTile(MAZE, "S")!, findTile(MAZE, "S")!), [findTile(MAZE, "S")!]);
   const [sr, sc] = findTile(MAZE, "S")!;
-  assert.equal(mazePath(MAZE, [sr, sc], [sr, sc + 3])!.length, 4); // S then three open tiles along the bottom corridor
+  assert.equal(mazePath(MAZE, [sr, sc], [sr - 2, sc])!.length, 3); // S, the tile above it, then the winner pocket
   assert.equal(mazePath(MAZE, [sr, sc], [0, 0]), null); // a wall tile
 });
 
@@ -62,7 +65,7 @@ test("mod is never negative and loopTile/heading never throw for any step, on ev
   assert.equal(mod(7, 6), 1);
   assert.equal(loopTile([], 3), null);
   assert.equal(heading([], 3), -1);
-  for (const p of ["1", "2", "3", "4", "5"]) {
+  for (const p of POCKET_IDS) {
     const loop = patrolLoop(MAZE, p);
     for (let k = -50; k <= 50; k++) {
       assert.ok(loopTile(loop, k));
@@ -71,12 +74,42 @@ test("mod is never negative and loopTile/heading never throw for any step, on ev
   }
 });
 
-test("the maze has 4 seller pockets, a centre pocket and a PiP-safe layout", () => {
-  for (const p of ["1", "2", "3", "4", "5"]) assert.ok(patrolLoop(MAZE, p).length >= 4, `pocket ${p}`);
-  assert.equal(MAZE.length, 5);
-  assert.equal(MAZE[0]!.length, 13);
-  // the right-hand seller pockets keep fish out of the top-right corner: no fish tile in row 1 at col >= 9
-  for (const p of ["1", "2", "3", "4"]) for (const [r, c] of patrolLoop(MAZE, p)) assert.ok(!(r === 1 && c >= 9), `pocket ${p} tile ${r},${c}`);
+test("the maze has 8 seller pockets and a centre pocket, none sharing tiles, all reachable from the start", () => {
+  const seen = new Set<string>();
+  for (const p of POCKET_IDS) {
+    const loop = patrolLoop(MAZE, p);
+    assert.ok(loop.length >= 4, `pocket ${p}`);
+    for (const t of loop) { assert.ok(!seen.has(t.join(",")), `pocket ${p} shares ${t}`); seen.add(t.join(",")); assert.equal(MAZE[t[0]]![t[1]], p); }
+    assert.ok(mazePath(MAZE, findTile(MAZE, "S")!, loop[0]!), `pocket ${p} reachable`);
+  }
+  assert.ok(MAZE.join("").split("9").length > 1);
+  assert.ok(mazePath(MAZE, findTile(MAZE, "S")!, findTile(MAZE, "9")!));
+  assert.equal(MAZE.length, 8);
+  assert.equal(MAZE[0]!.length, 21);
+});
+
+test("no 4 x 4 block of the maze is all corridor (no big empty areas)", () => {
+  assert.equal(emptyBlock(MAZE, 4), null);
+  assert.deepEqual(emptyBlock(["....", "....", "....", "...."], 4), [0, 0]);
+});
+
+test("every corridor tile is a pellet, a pocket or the start", () => {
+  for (const [r, c] of walkable) assert.ok(/[.1-9S]/.test(MAZE[r]![c]!), `tile ${r},${c}`);
+});
+
+test("pocket signs stay PiP-safe: no pocket in rows 0-1, and rows 0-2 pockets keep signs left of x 700", () => {
+  for (const p of POCKET_IDS) for (const [r, c] of patrolLoop(MAZE, p)) {
+    assert.ok(r >= 2, `pocket ${p} tile ${r},${c}`);
+    const cx = MAZE_ORIGIN.x + c * MAZE_TILE + MAZE_TILE / 2;
+    if (r <= 2) assert.ok(cx + 100 <= 700, `pocket ${p} tile ${r},${c} x ${cx}`);
+  }
+});
+
+test("support agent sprites are rectangular grids of the planned size", () => {
+  for (const [g, w, h] of [[PUFFER, 16, 14], [CHECKER, 10, 12], [REFEREE, 12, 14], [REFEREE_UP, 12, 14]] as const) {
+    assert.equal(g.length, h);
+    assert.ok(g.every((row) => row.length === w));
+  }
 });
 
 test("mazeWallPaths builds ridge paths for every colour", () => {

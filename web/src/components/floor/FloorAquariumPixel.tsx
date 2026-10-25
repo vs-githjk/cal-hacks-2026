@@ -1,63 +1,83 @@
 "use client";
 // web/src/components/floor/FloorAquariumPixel.tsx
 // ?scene=aquarium: a Pac-Man reef maze inside a glass tank. Fish patrol short loops around their pockets, Pac-Man travels the maze
-// to eat the highest price. Same data contract and behaviour rules as FloorRingPixel; the phase is the source of truth.
+// to eat the highest price. Four support agents (Shield, Advocate, Checker, Referee) swim in only while they act, one at a time.
+// Same data contract and behaviour rules as FloorRingPixel; the phase is the source of truth.
 import { useEffect, useId, useRef, useState, type CSSProperties, type JSX, type ReactNode } from "react";
 import type { FloorPhase, FloorScript, OutReason, SellerView } from "./floorPhases.ts";
 import type { FloorRendererProps } from "./FloorRingPixel.tsx";
-import { findTile, heading, loopTile, mazePath, patrolLoop, pocketRect, type Tile } from "./maze.ts";
-import { AQUA, AUDIT, FISH, GHOST, GHOST_COLORS, GHOST_SCARED, MAZE, MAZE_ORIGIN, MAZE_TILE as T, PAC, PAC_CLOSED, PAL, REEF, SHIELD, WEED_OFFSETS, fishColors, mazeWallPaths, runs, sandCells, type Grid } from "./pixelArt.ts";
+import { POCKET_IDS, findTile, heading, loopTile, mazePath, patrolLoop, pocketRect, type Tile } from "./maze.ts";
+import { AQUA, AUDIT, CHECKER, FISH, GHOST, GHOST_COLORS, GHOST_SCARED, MAZE, MAZE_ORIGIN, MAZE_TILE as T, PAC, PAC_CLOSED, PAL, PUFFER, REEF, REFEREE, REFEREE_UP, WEED_OFFSETS, fishColors, mazeWallPaths, mix, runs, sandCells, type Grid } from "./pixelArt.ts";
 
 const MONO = "var(--font-geist-mono, ui-monospace, monospace)";
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
-const TANK = { x: 90, y: 150, w: 780, h: 350 };
+const TANK = { x: 40, y: 150, w: 880, h: 360 };
 const WATER_Y = 172;
-const SAND_Y = 460;
-const FC = 4; // fish, Shield and Auditor cell size: fish 72 x 56
-const PC = 4; // Pac-Man cell size: 52 x 52
-const PW = 13 * PC;
+const SAND_Y = 490;
+const FC = 4; // sprite cell size before the cast scale
+const S = 0.85; // fish, Pac-Man and the support agents: fish 61 x 48, Pac-Man 44
+const PC = 4;
+const PW = 13 * PC * S;
 const PIP_X = 700; // no sign above stage y 200 right of this
-const STEP_MS = 160; // Pac-Man, per tile
-const PATROL_MS = 800; // fish, per tile
+const STEP_MS = 120; // Pac-Man, per tile
+const PATROL_MS = 700; // fish, per tile
+const SWIM_MS = 700; // a support agent swimming in or out
+const ACT_AT = 700; // an agent has arrived and starts to act
 
-const START = findTile(MAZE, "S") ?? ([4, 6] as Tile);
-const LOOPS: Tile[][] = ["1", "2", "3", "4"].map((d) => patrolLoop(MAZE, d));
+const START = findTile(MAZE, "S") ?? ([7, 10] as Tile);
+const LOOPS: Tile[][] = POCKET_IDS.map((d) => patrolLoop(MAZE, d));
 const px = (t: Tile) => ({ x: MAZE_ORIGIN.x + t[1] * T + T / 2, y: MAZE_ORIGIN.y + t[0] * T + T / 2 });
 const rectCentre = (ch: string) => {
   const r = pocketRect(MAZE, ch);
-  return r ? { x: MAZE_ORIGIN.x + ((r.c0 + r.c1 + 1) / 2) * T, y: MAZE_ORIGIN.y + ((r.r0 + r.r1 + 1) / 2) * T } : { x: 480, y: 332 };
+  return r ? { x: MAZE_ORIGIN.x + ((r.c0 + r.c1 + 1) / 2) * T, y: MAZE_ORIGIN.y + ((r.r0 + r.r1 + 1) / 2) * T } : { x: 480, y: 400 };
 };
-const POCKETS = ["1", "2", "3", "4"].map(rectCentre);
-const WIN_RECT = pocketRect(MAZE, "5");
-// winner stands in the pocket's right column, 8 units right of it, so its label clears Pac-Man's; the pair stays left of x 560
-const WIN_AT = WIN_RECT ? { x: px([WIN_RECT.r0, WIN_RECT.c1]).x + 8, y: rectCentre("5").y } : rectCentre("5");
-const WIN_PAC: Tile = WIN_RECT ? [WIN_RECT.r1, WIN_RECT.c0 - 1] : START; // the corridor tile left of the pocket
+const POCKETS = POCKET_IDS.map(rectCentre);
+const WIN_RECT = pocketRect(MAZE, "9");
+const WIN_AT = rectCentre("9"); // the winner stands in the middle of the centre pocket; Pac-Man waits at its left end
+const WIN_PAC: Tile = WIN_RECT ? [WIN_RECT.r1, WIN_RECT.c0 - 1] : START;
 const tkey = (t: Tile) => `${t[0]},${t[1]}`;
 const PELLETS: Tile[] = [];
 MAZE.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === ".") PELLETS.push([r, c]); }));
 const WALLS = mazeWallPaths();
-const SAND = sandCells(TANK.w - 2, 40);
-const PEBBLES: ReadonlyArray<readonly [number, number, number]> = [[150, 466, 8], [262, 478, 5], [388, 470, 6], [505, 484, 8], [640, 468, 5], [742, 480, 6], [830, 470, 5]];
-const WEEDS: ReadonlyArray<readonly [number, number]> = [[118, 0], [545, 1.3], [842, 2.1]];
+const SAND = sandCells(TANK.w - 2, 20);
+const PEBBLES: ReadonlyArray<readonly [number, number, number]> = [[100, 496, 8], [230, 500, 5], [370, 494, 6], [505, 500, 8], [650, 495, 5], [780, 499, 6], [890, 495, 5]];
+const WEEDS: ReadonlyArray<readonly [number, number]> = [[56, 0], [330, 1.3], [902, 2.1]];
 const CSS = [
   "@keyframes aq-sway{0%,100%{transform:rotate(-3.5deg)}50%{transform:rotate(3.5deg)}}",
   "@keyframes aq-rise{0%{transform:translateY(0);opacity:0}15%{opacity:.3}100%{transform:translateY(calc(-1 * var(--rise,120px)));opacity:0}}",
   "@keyframes aq-pop{from{transform:translate(0,0);opacity:.5}to{transform:translate(var(--dx),var(--dy));opacity:0}}",
+  "@keyframes aq-in{from{transform:translate(var(--dx),var(--dy));opacity:0}to{transform:translate(0,0);opacity:1}}",
+  "@keyframes aq-out{from{transform:translate(0,0);opacity:1}to{transform:translate(var(--dx),var(--dy));opacity:0}}",
   "@keyframes fr-stamp{from{opacity:0;transform:scale(1.4)}}",
 ].join("");
 const mono = (size: number, extra?: CSSProperties): CSSProperties => ({ fontFamily: MONO, fontSize: size, ...extra });
 const label = (extra?: CSSProperties): CSSProperties => mono(10, { paintOrder: "stroke", stroke: PAL.ink, strokeWidth: 3, strokeLinejoin: "round", ...extra });
 
 const focusOf = (phase: FloorPhase, r: OutReason | null) => (r === "shield_block" ? phase.shieldAt : r === "failed_fit" || r === "advocate_veto" ? phase.checkerAt : phase.buyerAt);
-const fishTile = (i: number, tick: number): Tile => loopTile(LOOPS[i % 4] ?? [], tick + 2 * i) ?? START;
+const fishTile = (i: number, tick: number): Tile => loopTile(LOOPS[i % 8] ?? [], tick + 2 * i) ?? START;
+const gridW = (g: Grid) => g[0]!.length * FC * S;
+const gridH = (g: Grid) => g.length * FC * S;
+
+/** Spiky outline for the Shield bubble: n points alternating between radius R and R + spike. */
+function spikyPoints(R: number, spike: number, n: number): string {
+  return Array.from({ length: n * 2 }, (_, k) => {
+    const a = (k * Math.PI) / n, rr = k % 2 ? R + spike : R;
+    return `${(Math.cos(a) * rr).toFixed(1)},${(Math.sin(a) * rr).toFixed(1)}`;
+  }).join(" ");
+}
+const SPIKES = Array.from({ length: 10 }, (_, k) => { const a = (k * Math.PI) / 5; return [Math.round(32 + Math.cos(a) * 35), Math.round(28 + Math.sin(a) * 32)] as const; });
 
 interface Sg { label: string; sub: string | null; tone: string }
 interface Row {
   id: string; name: string; sx: number; sy: number; cx: number; W: number; H: number; flip: boolean; color: string; grid: Grid; colors: Record<string, string>;
-  pos: { x: number; y: number }; gone: boolean; shrink: boolean; burst: boolean; sign: Sg | null; stamp: string | null; field: boolean; tag: boolean; win: boolean; newly: boolean; w: number;
+  pos: { x: number; y: number }; gone: boolean; shrink: boolean; burst: boolean; sign: Sg | null; stamp: string | null; field: boolean; ctag: { text: string; tone: string } | null;
+  tag: boolean; win: boolean; newly: boolean; w: number; reason: OutReason | null;
 }
 interface Journey { p: FloorPhase | null; path: Tile[]; frozen: Record<string, number>; eaten0: ReadonlySet<string> }
 interface Carry { tile: Tile; frozen: Record<string, number>; eaten: ReadonlySet<string> }
+type AgentKind = "shield" | "advocate" | "checker" | "referee";
+interface Cand { kind: AgentKind; key: string; start: number; end: number; row: Row | null }
+interface Placed { kind: AgentKind; key: string; x: number; y: number; w: number; h: number; flip: boolean; from: { x: number; y: number }; puffed: boolean; armUp: boolean; lensUp: boolean; sig: string; rowId: string | null }
 
 function Sprite({ grid, colors, cell, flip }: { grid: Grid; colors: Record<string, string>; cell: number; flip?: boolean }): JSX.Element {
   return (
@@ -98,14 +118,18 @@ function SellerG({ r, reduced }: { r: Row; reduced: boolean }): JSX.Element {
   const tx = Math.min(cx, cx + tagDx + tagW / 2 - 12);
   const stampW = (r.stamp?.length ?? 0) * 7.4 + 16;
   const fade = reduced ? "none" : "opacity 500ms ease-in-out, transform 400ms ease-in-out";
+  const ctW = (r.ctag?.text.length ?? 0) * 6.6 + 16;
+  const fieldR = Math.max(r.W, r.H) / 2 + 20;
   return (
     <g aria-hidden="true" style={{ transform: `translate(${r.pos.x}px, ${r.pos.y}px)`, transition: reduced ? "none" : r.win ? "transform 900ms ease-in-out" : `transform ${PATROL_MS}ms linear` }}>
       <g style={{ opacity: r.gone ? 0 : 1, transform: `scale(${r.gone && r.shrink ? 0 : 1})`, transformBox: "fill-box", transformOrigin: "center", transition: fade }}>
-        <Sprite grid={r.grid} colors={r.colors} cell={FC} flip={r.flip} />
+        <g transform={`scale(${S})`}><Sprite grid={r.grid} colors={r.colors} cell={FC} flip={r.flip} /></g>
         <text x={cx} y={r.H + 13} textAnchor="middle" fill={r.color} style={label()}>{r.name.length > 24 ? `${r.name.slice(0, 23)}...` : r.name}</text>
       </g>
-      <circle cx={cx} cy={r.H / 2} r={Math.max(r.W, r.H) / 2 + 20} fill={PAL.cyan} fillOpacity={0.12} stroke={PAL.cyan} strokeOpacity={0.8} strokeDasharray="4 3"
-        style={{ opacity: r.field ? 1 : 0, transform: `scale(${r.field ? 1 : 0.4})`, transformBox: "fill-box", transformOrigin: "center", transition: reduced ? "none" : "opacity 400ms ease-in-out, transform 500ms ease-in-out" }} />
+      <g transform={`translate(${cx} ${r.H / 2})`}>
+        <polygon points={spikyPoints(fieldR, 7, 18)} fill={PAL.cyan} fillOpacity={0.12} stroke={PAL.cyan} strokeOpacity={0.8} strokeDasharray="4 3" strokeLinejoin="round"
+          style={{ opacity: r.field ? 1 : 0, transform: `scale(${r.field ? 1 : 0.4})`, transformBox: "fill-box", transformOrigin: "center", transition: reduced ? "none" : "opacity 400ms ease-in-out, transform 500ms ease-in-out" }} />
+      </g>
       {r.burst ? [0, 1, 2, 3, 4].map((k) => (
         <circle key={k} cx={cx} cy={r.H / 2} r={3} fill="#fff" opacity={0.5}
           style={{ ["--dx" as string]: `${Math.round(Math.cos(k * 1.26 + 0.4) * 26)}px`, ["--dy" as string]: `${Math.round(Math.sin(k * 1.26 + 0.4) * 22 - 10)}px`, animation: "aq-pop 600ms ease-out forwards" }} />
@@ -118,6 +142,12 @@ function SellerG({ r, reduced }: { r: Row; reduced: boolean }): JSX.Element {
         </g>
       ) : null}
       {r.sign ? <SignTag sg={r.sign} w={r.w} cx={cx} tether={!r.gone} /> : null}
+      {r.ctag ? (
+        <g>
+          <rect x={cx - ctW / 2} y={-80} width={ctW} height={18} rx={3} fill={PAL.ink} stroke={r.ctag.tone} strokeWidth={1.5} />
+          <text x={cx} y={-67} textAnchor="middle" fill={r.ctag.tone} style={mono(11)}>{r.ctag.text}</text>
+        </g>
+      ) : null}
       {r.stamp ? (
         <g transform={`translate(${cx} -28) rotate(-8) scale(1.35)`}>
           <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: reduced ? undefined : "fr-stamp 250ms ease-out both" }}>
@@ -126,6 +156,71 @@ function SellerG({ r, reduced }: { r: Row; reduced: boolean }): JSX.Element {
           </g>
         </g>
       ) : null}
+    </g>
+  );
+}
+
+const DARK_CYAN = mix(PAL.cyan, "#000000", 0.32);
+const PUFFER_COLORS = { X: PAL.cyan, D: DARK_CYAN, S: mix(PAL.cyan, "#000000", 0.22), E: PAL.ink };
+const REF_COLORS = { C: "#c7d4ff", H: "#f1c9a0", E: PAL.ink, K: "#2b3340", W: "#ffffff" };
+
+/** One support agent at its target: swims in from the tank edge, acts, swims back out (leaving). Positioned by its top-left corner. */
+function AgentG({ a, reduced, leaving }: { a: Placed; reduced: boolean; leaving: boolean }): JSX.Element {
+  const tr = reduced ? "none" : "transform 400ms ease-in-out, opacity 300ms ease-in-out";
+  const motion = reduced ? undefined : `${leaving ? "aq-out" : "aq-in"} ${SWIM_MS}ms ease-in-out both`;
+  const cx = a.w / 2, cy = a.h / 2;
+  let body: ReactNode;
+  let name = "";
+  let nameStyle: CSSProperties = {};
+  if (a.kind === "shield") {
+    name = "Shield";
+    nameStyle = { transform: `translateY(${a.puffed ? a.h * 0.25 : 0}px)`, transition: tr };
+    body = (
+      <g transform={`translate(${cx} ${cy})`}>
+        <g style={{ transform: `scale(${a.puffed ? 1.5 : 1})`, transition: tr }}>
+          <g transform={`scale(${S}) translate(${-8 * FC} ${-7 * FC})`}>
+            <Sprite grid={PUFFER} colors={PUFFER_COLORS} cell={FC} flip={a.flip} />
+            <g shapeRendering="crispEdges" style={{ opacity: a.puffed ? 1 : 0, transition: tr }}>
+              {SPIKES.map(([sx, sy], k) => <rect key={k} x={sx - 3} y={sy - 3} width={6} height={6} fill={DARK_CYAN} />)}
+            </g>
+          </g>
+        </g>
+      </g>
+    );
+  } else if (a.kind === "advocate") {
+    name = "Advocate";
+    body = (
+      <g transform={`scale(${S})`}>
+        <g transform={a.flip ? `translate(${12 * FC} 0) scale(-1 1)` : undefined}>
+          <Sprite grid={AUDIT} colors={{ X: PAL.mint, E: PAL.ink }} cell={FC} />
+          <g style={{ transform: a.lensUp ? "translate(2px, -12px)" : "translate(0px, 0px)", transition: tr }}>
+            <Sprite grid={AUDIT} colors={{ M: PAL.line, L: PAL.lens }} cell={FC} />
+          </g>
+        </g>
+      </g>
+    );
+  } else if (a.kind === "checker") {
+    name = "Checker";
+    body = <g transform={`scale(${S})`}><Sprite grid={CHECKER} colors={{ X: PAL.mint, T: PAL.ink }} cell={FC} /></g>;
+  } else {
+    name = "Referee";
+    body = <g transform={`scale(${S})`}><Sprite grid={a.armUp ? REFEREE_UP : REFEREE} colors={REF_COLORS} cell={FC} /></g>;
+  }
+  const side = a.kind === "referee";
+  return (
+    <g aria-hidden="true" transform={`translate(${a.x} ${a.y})`}>
+      <g style={{ ["--dx" as string]: `${a.from.x - a.x}px`, ["--dy" as string]: `${a.from.y - a.y}px`, animation: motion }}>
+        {body}
+        <text x={side ? -4 : cx} y={side ? cy : a.h + 13} textAnchor={side ? "end" : "middle"} fill={PAL.line} style={label(nameStyle)}>{name}</text>
+        {reduced ? null : (
+          <g key={leaving ? "o" : "i"}>
+            {[0, 1, 2].map((k) => (
+              <circle key={k} cx={a.w * (0.25 + k * 0.25)} cy={a.h * 0.7} r={2 + (k % 2)} fill="#fff" opacity={0}
+                style={{ ["--rise" as string]: "34px", animation: `aq-rise ${SWIM_MS}ms ease-out ${k * 110}ms both` }} />
+            ))}
+          </g>
+        )}
+      </g>
     </g>
   );
 }
@@ -152,11 +247,41 @@ function Weed({ x, delay, reduced }: { x: number; delay: number; reduced: boolea
   );
 }
 
+/** Where an agent stands next to a fish (or at the top-centre for the Referee), and the tank-edge point it swims in from. */
+function place(c: Cand, e: number, phase: FloorPhase, reduced: boolean, continuing: boolean): Placed {
+  const grid = c.kind === "shield" ? PUFFER : c.kind === "advocate" ? AUDIT : c.kind === "checker" ? CHECKER : REFEREE;
+  const w = gridW(grid), h = gridH(grid);
+  const f = c.row;
+  const fishCx = f ? f.sx + f.W / 2 : 480;
+  const left = fishCx >= TANK.x + 180; // stand on the left of the fish unless that is near the glass
+  let x: number, y: number;
+  if (c.kind === "referee" || !f) { x = 480 - w / 2; y = WATER_Y - 20; }
+  else if (c.kind === "shield") {
+    const cxx = left ? f.sx - 8 - w * 0.75 : f.sx + f.W + 8 + w * 0.75;
+    x = cxx - w / 2; y = f.sy + f.H / 2 - h / 2;
+  } else { x = left ? f.sx - 8 - w : f.sx + f.W + 8; y = f.sy + f.H - h; }
+  const padX = c.kind === "shield" ? w * 0.25 + 6 : 6;
+  x = Math.max(TANK.x + padX, Math.min(TANK.x + TANK.w - w - padX, x));
+  y = Math.max(WATER_Y + (c.kind === "shield" ? h * 0.25 : 0) + 2, Math.min(SAND_Y + 18 - h, y));
+  const dl = x - TANK.x, dr = TANK.x + TANK.w - (x + w), dt = y - TANK.y, db = TANK.y + TANK.h - (y + h);
+  const m = Math.min(dl, dr, dt, db);
+  const from = m === dt ? { x, y: TANK.y - h * 0.4 } : m === dl ? { x: TANK.x - w * 0.6, y } : m === dr ? { x: TANK.x + TANK.w - w * 0.4, y } : { x, y: TANK.y + TANK.h - h * 0.4 };
+  const arrived = reduced || e >= ACT_AT;
+  const puffed = arrived || phase.kind === "eat";
+  const armUp = arrived || continuing;
+  const flip = c.kind === "shield" ? left : c.kind === "referee" ? false : !left;
+  return {
+    kind: c.kind, key: c.key, x, y, w, h, flip, from, puffed, armUp, lensUp: arrived, rowId: f ? f.id : null,
+    sig: `${c.key}|${x.toFixed(1)}|${y.toFixed(1)}|${puffed}|${armUp}|${arrived}|${flip}`,
+  };
+}
+
 export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width }: FloorRendererProps): JSX.Element {
   const uid = useId().replace(/:/g, "");
   const [tick, setTick] = useState(0);
   const [clock, setClock] = useState<{ p: FloorPhase | null; ms: number }>({ p: null, ms: 0 });
   const [journey, setJourney] = useState<Journey>({ p: null, path: [START], frozen: {}, eaten0: new Set() });
+  const [lastAgent, setLastAgent] = useState<Placed | null>(null);
   const tickRef = useRef(0);
   const carry = useRef<Carry>({ tile: START, frozen: {}, eaten: new Set() });
 
@@ -231,7 +356,7 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width 
     let stamp: string | null = null;
     let burst = false;
     let sign: Sg | null = gone ? null : priced;
-    if (kind === "shield" && phase.shieldAt === s.id && e >= 700) { scared = true; sign = blocked; }
+    if (kind === "shield" && phase.shieldAt === s.id && e >= ACT_AT) { scared = true; sign = blocked; }
     if (newly && eatsUp) {
       scared = e >= arrive - 300;
       if (e >= bite) { gone = true; burst = e < bite + 800 && !reducedMotion; sign = e < bite + 1500 ? { label: v.ledger, sub: null, tone: PAL.line } : null; }
@@ -240,32 +365,65 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width 
       if (e >= 1300) { gone = true; sign = null; }
     } else if (newly) {
       scared = true;
-      stamp = e >= 150 ? (r === "failed_fit" ? "REJECTED · fit" : "REJECTED · condition") : null;
-      if (e >= 900) { gone = true; stamp = null; sign = null; }
+      if (r === "advocate_veto") stamp = e >= ACT_AT ? (/orderable/i.test(v.ledger) ? "REJECTED · not orderable" : "REJECTED · condition") : null;
+      if (e >= 1500) { gone = true; stamp = null; sign = null; }
     }
     const color = GHOST_COLORS[(s.slot - 1) % 4] ?? PAL.red;
     const fish = theme === "fish";
     const grid = fish ? FISH : scared ? GHOST_SCARED : GHOST;
-    const W = grid[0]!.length * FC, H = grid.length * FC;
+    const W = gridW(grid), H = gridH(grid);
     const t = frozenNow[s.id] ?? tick;
-    const centre = win ? WIN_AT : reducedMotion ? (POCKETS[i % 4] ?? WIN_AT) : px(fishTile(i, t));
+    const centre = win ? WIN_AT : reducedMotion ? (POCKETS[i % 8] ?? WIN_AT) : px(fishTile(i, t));
     rows.push({
-      id: s.id, name: s.name, sx: centre.x - W / 2, sy: centre.y - H / 2, cx: W / 2, W, H, color, win, newly, gone, shrink: eatsUp, burst, sign, stamp, grid,
-      flip: fish && !win && !reducedMotion && heading(LOOPS[i % 4] ?? [], t + 2 * i) > 0,
+      id: s.id, name: s.name, sx: centre.x - W / 2, sy: centre.y - H / 2, cx: W / 2, W, H, color, win, newly, gone, shrink: eatsUp, burst, sign, stamp, grid, reason: r, ctag: null,
+      flip: fish && !win && !reducedMotion && heading(LOOPS[i % 8] ?? [], t + 2 * i) > 0,
       pos: { x: centre.x - W / 2, y: centre.y - H / 2 },
       colors: fish ? fishColors(color, scared) : scared ? { X: PAL.scared } : { X: color, W: PAL.white, P: PAL.pupil },
-      field: phase.shieldAt === s.id && !(kind === "eat" && e >= 1300),
+      field: false,
       tag: phase.injection === s.id && !scared && !gone && v.state !== "eaten",
       w: Math.max(72, (sign?.label.length ?? 0) * 9 + 22, (sign?.sub?.length ?? 0) * 6.2 + 20),
     });
   });
 
+  // Support agents: only while they act, one at a time; the newest to start replaces the previous one.
+  const phaseIdx = script.phases.indexOf(phase);
+  const nextAt = phaseIdx >= 0 ? script.phases[phaseIdx + 1]?.at : undefined;
+  const plen = nextAt != null ? (nextAt - phase.at) * 1000 : Infinity;
+  const continuing = phaseIdx > 0 && script.phases[phaseIdx - 1]!.callText === phase.callText;
+  const cands: Cand[] = [];
+  const shieldRow = rows.find((r) => r.id === phase.shieldAt) ?? rows.find((r) => r.newly && r.reason === "shield_block");
+  if (shieldRow) cands.push({ kind: "shield", key: `shield|${shieldRow.id}`, start: 0, end: kind === "eat" ? 1300 : Infinity, row: shieldRow });
+  const advRow = rows.find((r) => r.newly && r.reason === "advocate_veto");
+  if (advRow) cands.push({ kind: "advocate", key: `advocate|${advRow.id}`, start: 0, end: 1600, row: advRow });
+  const chkRow = rows.find((r) => r.id === phase.checkerAt && r.reason !== "advocate_veto") ?? rows.find((r) => r.newly && r.reason === "failed_fit");
+  if (chkRow) cands.push({ kind: "checker", key: `checker|${chkRow.id}`, start: 0, end: kind === "eat" ? 1600 : Infinity, row: chkRow });
+  if (phase.callText && (kind === "call" || kind === "eat" || kind === "crown")) {
+    const others = cands.reduce((m, c) => Math.max(m, c.end), 0);
+    if (others + 900 <= plen) cands.push({ kind: "referee", key: `referee|${phase.callText}`, start: others, end: Infinity, row: null });
+  }
+  const live = cands.filter((c) => e >= c.start && (reducedMotion || e < c.end));
+  const chosen = live.length ? live.reduce((a, b) => (b.start >= a.start ? b : a)) : null;
+  const placed = chosen ? place(chosen, e, phase, reducedMotion, continuing) : null;
+  useEffect(() => {
+    if (!placed) return;
+    const t = setTimeout(() => setLastAgent((p) => (p && p.sig === placed.sig ? p : placed)), 0);
+    return () => clearTimeout(t);
+  });
+  const agent = placed ?? (reducedMotion ? null : lastAgent);
+
+  if (placed && chosen) {
+    for (const r of rows) {
+      if (chosen.kind === "shield") r.field = r.id === placed.rowId && placed.puffed;
+      if (chosen.kind === "checker" && r.id === placed.rowId && e >= ACT_AT) {
+        const v = phase.sellers[r.id];
+        if (v && (v.reason === "failed_fit" || v.state === "eaten")) r.ctag = { text: v.ledger, tone: PAL.coral };
+        else if (v && /^Fit OK/i.test(v.ledger)) r.ctag = { text: v.ledger, tone: PAL.mint };
+      }
+    }
+  }
+
   const winner = rows.find((r) => r.win);
   const eater = rows.find((r) => r.newly && r.shrink);
-  const shieldRow = rows.find((r) => r.id === phase.shieldAt);
-  const checkRow = rows.find((r) => r.id === phase.checkerAt);
-  const shieldOn = !!shieldRow && !(kind === "eat" && e >= 1300);
-  const auditOn = !!checkRow && !(kind === "eat" && e >= 1000);
 
   // Pac-Man on his tile, facing his last horizontal step; at the fish he faces it
   const tile = path[idx] ?? START;
@@ -279,18 +437,10 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width 
   for (let k = 0; k <= idx; k++) passed.add(tkey(path[k]!));
   const pelletPath = PELLETS.filter((t) => !passed.has(tkey(t))).map((t) => { const c = px(t); return `M${c.x - 2} ${c.y - 2}h4v4h-4z`; }).join("");
 
-  const tr = reducedMotion ? "none" : "transform 700ms ease-in-out, opacity 500ms ease-in-out";
-  const swimmer = (key: string, on: boolean, x: number, y: number, grid: Grid, colors: Record<string, string>): ReactNode => (
-    <g key={key} aria-hidden="true" style={{ transform: `translate(${x}px, ${y}px)`, opacity: on ? 1 : 0, transition: tr }}>
-      <Sprite grid={grid} colors={colors} cell={FC} />
-      {on && !reducedMotion ? <Bubbles x={20} y={-2} n={3} rise={60} dur={3} /> : null}
-    </g>
-  );
-  const shieldW = 11 * FC, auditW = 12 * FC, swimY = (r: Row | undefined) => (r ? r.sy + r.H - 14 * FC : 300);
   const sorted = [...rows].sort((a, b) => a.sy - b.sy);
 
   return (
-    <svg viewBox={width < 640 ? "70 120 820 400" : "0 0 960 540"} width="100%" role="img" aria-label={summary(script, phase)} style={{ display: "block", height: "auto" }}>
+    <svg viewBox={width < 640 ? "30 130 900 390" : "0 0 960 540"} width="100%" role="img" aria-label={summary(script, phase)} style={{ display: "block", height: "auto" }}>
       <style>{CSS}</style>
       <defs>
         <linearGradient id={`${uid}w`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={AQUA.top} /><stop offset="1" stopColor={AQUA.bottom} /></linearGradient>
@@ -302,24 +452,23 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width 
         <g clipPath={`url(#${uid}c)`}>
           {WEEDS.map(([x, d]) => <Weed key={x} x={x} delay={d} reduced={reducedMotion} />)}
           <g shapeRendering="crispEdges">
-            <rect x={TANK.x + 1} y={SAND_Y} width={TANK.w - 2} height={40} fill={AQUA.sandA} opacity={0.55} />
+            <rect x={TANK.x + 1} y={SAND_Y} width={TANK.w - 2} height={20} fill={AQUA.sandA} opacity={0.55} />
             {SAND.map(([x, y]) => <rect key={`${x}-${y}`} x={TANK.x + 1 + x} y={SAND_Y + y} width={10} height={10} fill={AQUA.sandB} opacity={0.55} />)}
             {PEBBLES.map(([x, y, s]) => <rect key={x} x={x} y={y} width={s} height={s - 2} fill={PAL.muted} opacity={0.5} />)}
           </g>
-          {reducedMotion ? null : <><Bubbles x={165} y={455} n={3} rise={260} dur={9} /><Bubbles x={705} y={455} n={3} rise={260} dur={11} /></>}
+          {reducedMotion ? null : <><Bubbles x={165} y={488} n={3} rise={260} dur={9} /><Bubbles x={705} y={488} n={3} rise={260} dur={11} /></>}
           <g shapeRendering="crispEdges" opacity={0.7}>
             <path d={WALLS.coralA} fill={REEF.coralA} /><path d={WALLS.coralB} fill={REEF.coralB} /><path d={WALLS.rock} fill={REEF.rock} />
             <path d={WALLS.light} fill="#fff" fillOpacity={0.14} /><path d={WALLS.dark} fill="#000" fillOpacity={0.2} />
           </g>
           <path d={pelletPath} fill={PAL.line} fillOpacity={0.5} shapeRendering="crispEdges" />
-          <ellipse cx={WIN_AT.x} cy={WIN_AT.y} rx={50} ry={32} fill="none" stroke={PAL.cyan} strokeWidth={2} style={{ opacity: finale && winner ? 1 : 0, transition: reducedMotion ? "none" : "opacity 500ms ease-in-out" }} />
+          <ellipse cx={WIN_AT.x} cy={WIN_AT.y} rx={46} ry={30} fill="none" stroke={PAL.cyan} strokeWidth={2} style={{ opacity: finale && winner ? 1 : 0, transition: reducedMotion ? "none" : "opacity 500ms ease-in-out" }} />
           {sorted.map((r) => <SellerG key={r.id} r={r} reduced={reducedMotion} />)}
-          {swimmer("shield", shieldOn, shieldOn && shieldRow ? shieldRow.sx - shieldW - 6 : 60, swimY(shieldRow), SHIELD, { X: PAL.cyan, B: PAL.ink, E: PAL.ink })}
-          {swimmer("audit", auditOn, auditOn && checkRow ? checkRow.sx + checkRow.W + 6 : 900 - auditW, swimY(checkRow), AUDIT, { X: PAL.mint, E: PAL.ink, M: PAL.line, L: PAL.lens })}
           <g aria-hidden="true" style={{ transform: `translate(${pc.x - PW / 2}px, ${pc.y - PW / 2}px)`, transition: reducedMotion ? "none" : `transform ${STEP_MS + 10}ms linear` }}>
-            <Sprite grid={open ? PAC : PAC_CLOSED} colors={{ X: PAL.pac }} cell={PC} flip={face < 0} />
+            <g transform={`scale(${S})`}><Sprite grid={open ? PAC : PAC_CLOSED} colors={{ X: PAL.pac }} cell={PC} flip={face < 0} /></g>
             <text x={PW / 2} y={PW + 13} textAnchor="middle" fill={PAL.line} style={label()}>the buyer</text>
           </g>
+          {agent ? <AgentG key={agent.key} a={agent} reduced={reducedMotion} leaving={!placed} /> : null}
         </g>
         <g fill="#fff"><rect x={TANK.x + 1} y={WATER_Y} width={TANK.w - 2} height={2} opacity={0.18} /><rect x={220} y={WATER_Y + 4} width={60} height={2} opacity={0.1} /><rect x={560} y={WATER_Y + 4} width={90} height={2} opacity={0.1} /></g>
         <rect x={TANK.x} y={TANK.y} width={TANK.w} height={TANK.h} rx={8} fill="none" stroke={PAL.line} strokeOpacity={0.35} strokeWidth={2} />

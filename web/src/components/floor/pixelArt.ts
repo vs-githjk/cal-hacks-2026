@@ -98,17 +98,22 @@ export function sandCells(w: number, h: number): Array<[number, number]> {
 }
 
 // ---- Reef maze (aquarium scene) ----
-// # wall (a thin coral or rock ridge), . corridor with a pellet, space empty corridor, 1-4 a seller pocket (a 2 x 2 room), 5 the centre pocket (winner), S Pac-Man start.
-// The top row is the reef ceiling; the bottom row has no wall (the sand is the floor). Top-left of tile (0,0) is MAZE_ORIGIN.
+// # wall (a thin coral or rock ridge), . corridor with a pellet, 1-8 a seller pocket (a 2 x 2 room), 9 the centre pocket (winner), S Pac-Man start.
+// 21 x 8 tiles of 40. Pockets 1-4 are spread (top-left, bottom-right, top-centre, bottom-left); 5-8 fill the rest. Rows 0-1 hold no pocket and
+// the top-right corner (x > 700, y < 200) holds walls and pellets only. The top row is the reef ceiling; the bottom row has no wall (the sand is the floor).
+// Top-left of tile (0,0) is MAZE_ORIGIN. No 4 x 4 block is all corridor.
 export const MAZE: readonly string[] = [
-  "#############",
-  "#11.#.#33.#.#",
-  "#11.#5533.#.#",
-  "###2255.##44#",
-  "#..22.S...44#",
+  "#####################",
+  "#..##...##....##...##",
+  "#11#..55.#.33.#...#.#",
+  "#11...55.#.33.#.66..#",
+  "#.##.##.#...####66.##",
+  "#..#.#...999..##.#..#",
+  "#44.#.77...#.88...22#",
+  "#44.#.77.#S#.88.#.22#",
 ];
-export const MAZE_TILE = 56;
-export const MAZE_ORIGIN = { x: 116, y: 172 };
+export const MAZE_TILE = 40;
+export const MAZE_ORIGIN = { x: 60, y: 172 };
 export const REEF = { coralA: "#c4566b", coralB: "#e07a5f", rock: "#4a5d6e" } as const;
 
 /**
@@ -116,7 +121,7 @@ export const REEF = { coralA: "#c4566b", coralB: "#e07a5f", rock: "#4a5d6e" } as
  * adjacent wall tile, built from 4 unit cells with rounded corners, a few coral branch nubs and light/dark texture cells.
  */
 export function mazeWallPaths(grid: readonly string[] = MAZE): { coralA: string; coralB: string; rock: string; light: string; dark: string } {
-  const U = 4, per = MAZE_TILE / U; // 14 cells per tile
+  const U = 4, per = MAZE_TILE / U; // 10 cells per tile
   const cols = (grid[0]?.length ?? 0) * per + 2, rows = grid.length * per + 2;
   const ras = new Uint8Array(cols * rows); // 0 empty, 1 coralA, 2 coralB, 3 rock
   const at = (x: number, y: number) => (x < 0 || y < 0 || x >= cols || y >= rows ? 0 : ras[y * cols + x]!);
@@ -180,3 +185,25 @@ export function mazeWallPaths(grid: readonly string[] = MAZE): { coralA: string;
   }
   return out;
 }
+
+// ---- Aquarium support agents (additions only) ----
+// 16x14 pufferfish facing left. X body, D darker spots, S fins and tail, E eye.
+export const PUFFER: Grid = [
+  "....XXXXXXXX....", "..XXXXXXXXXXXX..", ".XXXDXXXXXXXXXX.", ".XXEXXXXXXXXDXXS", "XXXXXXXXXXXXXXSS", "XXXDXXXXXXXXXXSS",
+  "XXXXXXXXXXXDXXSS", "XXXXXXXXXXXXXXSS", ".XXXXXDXXXXXXXS.", ".XXXXXXXXXXXXX..", "..XXXXXXXXXXXX..", "....XXXXXXXX....",
+  "......SS..SS....", "......SS..SS....",
+];
+// 10x12 Checker: a box with a tick (T) and two feet.
+export const CHECKER: Grid = [
+  "..XXXXXX..", ".XXXXXXXX.", "XXXXXXXTTX", "XXXXXXTTXX", "XTTXXTTXXX", "XXTTTTXXXX", "XXXTTXXXXX", "XXXXXXXXXX",
+  "XXXXXXXXXX", "XXXXXXXXXX", ".XX....XX.", ".XX....XX.",
+];
+// 12x14 Referee, arm down and arm up. C cap, H skin, E eye, K dark stripe, W light stripe.
+export const REFEREE: Grid = [
+  "...CCCCCC...", "..CCCCCCCC..", "..HHHHHHHH..", "..HEHHHHEH..", "..HHHHHHHH..", "...HHHHHH...", "..KKKKKKKK..",
+  ".HWWWWWWWWH.", ".HKKKKKKKKH.", ".HWWWWWWWWH.", "..KKKKKKKK..", "..KK....KK..", "..KK....KK..", ".KKK....KKK.",
+];
+export const REFEREE_UP: Grid = [
+  "...CCCCCC.HH", "..CCCCCCCC.H", "..HHHHHHHH.H", "..HEHHHHEH.H", "..HHHHHHHH.H", "...HHHHHH.HH", "..KKKKKKKKH.",
+  ".HWWWWWWWW..", ".HKKKKKKKK..", ".HWWWWWWWW..", "..KKKKKKKK..", "..KK....KK..", "..KK....KK..", ".KKK....KKK.",
+];
