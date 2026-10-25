@@ -127,7 +127,8 @@ function SellerG({ r, reduced }: { r: Row; reduced: boolean }): JSX.Element {
   const cx = r.cx;
   const tagDx = r.pos.y - 84 < 200 && r.pos.x + cx + tagW / 2 > PIP_X ? PIP_X - (r.pos.x + cx + tagW / 2) : 0;
   const tx = Math.min(cx, cx + tagDx + tagW / 2 - 12);
-  const stampW = (r.stamp?.length ?? 0) * 7.4 + 16;
+  const stampW = r.w + 8;
+  const stampFont = Math.max(8, Math.min(r.stamp && /orderable/.test(r.stamp) ? 10 : 11, (stampW - 12) / (Math.max(1, r.stamp?.length ?? 1) * 0.6)));
   const fade = reduced ? "none" : "opacity 500ms ease-in-out, transform 400ms ease-in-out";
   const ctW = (r.ctag?.text.length ?? 0) * 6.6 + 16;
   const fieldR = Math.max(r.W, r.H) / 2 + 20;
@@ -160,10 +161,10 @@ function SellerG({ r, reduced }: { r: Row; reduced: boolean }): JSX.Element {
         </g>
       ) : null}
       {r.stamp ? (
-        <g transform={`translate(${cx} -28) rotate(-8) scale(1.35)`}>
+        <g transform={`translate(${cx} ${-14 - (r.sign?.sub ? 40 : 24) / 2}) rotate(-8)`}>
           <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: reduced ? undefined : "fr-stamp 250ms ease-out both" }}>
-            <rect x={-stampW / 2} y={-20} width={stampW} height={40} rx={3} fill={PAL.ink} stroke={PAL.red} strokeWidth={2} />
-            <text x={0} y={4} textAnchor="middle" fill={PAL.red} style={mono(12, { fontWeight: 500 })}>{r.stamp}</text>
+            <rect x={-stampW / 2} y={-15} width={stampW} height={30} rx={3} fill={PAL.ink} stroke={PAL.red} strokeWidth={2} />
+            <text x={0} y={stampFont * 0.35} textAnchor="middle" fill={PAL.red} style={mono(stampFont, { fontWeight: 500 })}>{r.stamp}</text>
           </g>
         </g>
       ) : null}
