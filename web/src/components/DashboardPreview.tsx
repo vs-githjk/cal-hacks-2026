@@ -43,7 +43,7 @@ export function DashboardPreview() {
 
 function Mini({ label, pill, children }: { label: string; pill: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="fm-tile rounded-2xl border border-line bg-surface p-4 shadow-card">
+    <div className="fm-tile rounded-2xl p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-[12px] font-medium uppercase tracking-[0.04em] text-muted">{label}</span>
         {pill}
