@@ -28,6 +28,7 @@ MAX_LISTINGS = 1000
 VERDICTS = ("block", "flag", "pass", "skipped")
 FIELDS = (("title", ("title",)), ("description", ("description",)), ("seller_notes", ("sellerNotes", "seller_notes")))
 ORIGINS = ("LIVE", "MIRROR", "SIM")
+UNVERIFIED = "UNVERIFIED"  # the caller gave no valid label: never assume LIVE (#342)
 SEP = "\n\n"
 
 
@@ -81,7 +82,7 @@ def _now() -> str:
 
 def _origin(listing) -> str:
     o = str(listing.get("origin") or "").strip().upper() if isinstance(listing, dict) else ""
-    return o if o in ORIGINS else "LIVE"
+    return o if o in ORIGINS else UNVERIFIED
 
 
 def _summary(verdict: str, rule_ids: list, screened: bool, why: str | None = None) -> str:
