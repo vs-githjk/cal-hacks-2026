@@ -91,7 +91,7 @@ def checks_of(run: Mapping) -> dict:
             ids = {e["bid_id"] for e in caught}
             out["beat2_caught_listing_never_ranked_or_payable"] = (
                 not ids & {r["bid_id"] for r in b2["ranking"]["ranked"]} and not ids & {c["bid_id"] for c in b2["cards"]}
-                and b2["winner"]["bid_id"] not in ids)
+                and (b2["winner"] is None or b2["winner"]["bid_id"] not in ids))
         win = next((b for b in b2["bids"] if b["id"] == b2["winner"]["bid_id"]), None) if b2["winner"] else None
         out["beat2_winner_is_a_real_mirror_seller"] = bool(win and win["origin"] == "MIRROR" and win["lines"][b2["winner"]["line"]]["origin"] == "MIRROR")
         out["beat2_one_seller_has_new_and_open_box_lines"] = any({"new", "open-box"} <= {l["offered_condition"] for l in b["lines"]} for b in b2["bids"])

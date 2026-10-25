@@ -8,6 +8,7 @@ from demo.common import MIRROR, PAGE_BASE, SIM, SITE, money, validate
 from demo.pages import read_page
 from demo.round import caught_label, landed_note, run_round
 from demo.sellers import Seller, all_sellers
+from shield.classifier import UNAVAILABLE_RULE
 from shield.core import screen
 from shield.service import attack_type
 
@@ -112,19 +113,28 @@ def run_beat2(b1: dict, now: datetime, say, round_no: int = 1) -> dict:
             say.line(tag, f"{w['rule_id']}: {w['text']}", 3)
             say.line(tag, f"source: {w['source_url']}", 4)
     w = res["winner"]
-    winner_seller = by_id[w["seller_id"]]
     say.blank()
-    vetoed = [(r["landed"], by_id[r["seller_id"]].name + f" ({money(r['landed'])}, {c['call_reason']['rule_id']})")
-              for r, c in zip(res["ranking"]["ranked"], res["cards"]) if c["recommendation"] == "veto" and r["rank"] < w["rank"]]
-    vetoed += [(e["landed"], by_id[e["seller_id"]].name + f" ({money(e['landed'])}, {e['card']['call_reason']['rule_id']}, caught by Shield)")
-               for e in res["caught"] if e["card"]["recommendation"] == "veto" and e["landed"] < w["landed"]]
-    say.line(winner_seller.origin, f"winner: {winner_seller.name} at {landed_note(winner_seller, w['landed'])}; vetoed as cheaper: "
-             + "; ".join(t for _, t in vetoed))
+    winner_seller = by_id[w["seller_id"]] if w else None
+    if w is None:   # nothing survived (for example the classifier down for every seller): there is nothing to rank or pay
+        if res["shield"] and all(UNAVAILABLE_RULE in v["rule_ids"] for v in res["shield"]):
+            say.line(SIM, f"no seller could be screened: the Shield classifier was unavailable for all {len(res['shield'])} sellers, "
+                          "so every bid was held closed; nothing is ranked or paid and there is no winner")
+        else:
+            say.line(SIM, "no winner: no bid survived Shield, the referee and the advocate; nothing is ranked or paid")
+    else:
+        vetoed = [(r["landed"], by_id[r["seller_id"]].name + f" ({money(r['landed'])}, {c['call_reason']['rule_id']})")
+                  for r, c in zip(res["ranking"]["ranked"], res["cards"]) if c["recommendation"] == "veto" and r["rank"] < w["rank"]]
+        vetoed += [(e["landed"], by_id[e["seller_id"]].name + f" ({money(e['landed'])}, {e['card']['call_reason']['rule_id']}, "
+                    + ("held by Shield (classifier unavailable)" if e["rule"] == UNAVAILABLE_RULE else "caught by Shield") + ")")
+                   for e in res["caught"] if e["card"]["recommendation"] == "veto" and e["landed"] < w["landed"]]
+        say.line(winner_seller.origin, f"winner: {winner_seller.name} at {landed_note(winner_seller, w['landed'])}; vetoed as cheaper: "
+                 + "; ".join(t for _, t in vetoed))
     first = min([(r["landed"], c) for r, c in zip(res["ranking"]["ranked"], res["cards"])] + [(e["landed"], e["card"]) for e in res["caught"]],
                 key=lambda t: t[0], default=(0, None))[1]
     return {"sellers": [_seller_artifact(s) for s in sellers], "skips": skips, **res,
             "veto_reason": first["call_reason"] if first and first["recommendation"] == "veto" else None,
-            "winner_seller_id": w["seller_id"], "winner_note": landed_note(winner_seller, w["landed"])}
+            "winner_seller_id": w["seller_id"] if w else None,
+            "winner_note": landed_note(winner_seller, w["landed"]) if w else None}
 
 
 def _seller_artifact(s: Seller) -> dict:
