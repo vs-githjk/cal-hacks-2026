@@ -1,12 +1,14 @@
 # Screen map
 
-Each route: its job, what it must show (true to the backend today), the components, and a snippet. Snippets are React 19 + Tailwind v4 utilities from the `@theme` block in `handoff.md` (`bg-surface`, `text-muted`, `border-line`, `font-serif`, `rounded-card`). Animation uses `motion` 11 (`import { motion } from "motion/react"`). Every state word comes from the `source` and `status` fields; never derive a label from colour.
+> **Version 2 note (Oct 25 2026).** Token values changed; names mostly did not. Every `font-serif` display is now Geist 500 with tight tracking, `royal` is `referee`, `shadow-pop` is `shadow-lift`, `shadow-glow` is `shadow-focus`, and the canvas is Prism's cool #eef3f8. Snippets below were updated by substitution and not re-rendered; treat them as starting points and check them against the previews.
+
+Each route: its job, what it must show (true to the backend today), the components, and a snippet. Snippets are React 19 + Tailwind v4 utilities from the `@theme` block in `handoff.md` (`bg-surface`, `text-muted`, `border-line`, `font-sans`, `rounded-card`). Animation uses `motion` 11 (`import { motion } from "motion/react"`). Every state word comes from the `source` and `status` fields; never derive a label from colour.
 
 Owner key: **V** = Vedant (landing, /start, /buyer*), **A** = Abhinav (/floor), shared otherwise.
 
 | Route | Job | Must show | Components |
 | --- | --- | --- | --- |
-| `/` (V) | Make a visitor trust it in 10 seconds and start a goal | Hero with one serif headline, three measured numbers (39 of 39, 12 of 20, 9 of 10), the five steps, a "what is real" strip, the agent roster teaser, Seller Kit teaser, "Watch the floor" | Nav, Hero, StatusPill, AgentRoster (3 rows), WindTunnel (numbers), footer with "Sandbox only: test cards, test identities, no real money" |
+| `/` (V) | Make a visitor trust it in 10 seconds and start a goal | Hero with one serif headline, three measured numbers (39 of 39, 13 of 20, 9 of 10), the five steps, a "what is real" strip, the agent roster teaser, Seller Kit teaser, "Watch the floor" | Nav, Hero, StatusPill, AgentRoster (3 rows), WindTunnel (numbers), footer with "Sandbox only: test cards, test identities, no real money" |
 | `/start` (V) | Capture the goal | Goal, allowance, phone, owned parts (SIM rig), the sentence about the call code | GoalCard, Nav |
 | `/buyer` (V) | The buyer home: the one live round | Round number and part, seller count, sealed pills, closes-in timer, last referee call, the ASI:One panel on the right (1440) or as a sheet (390) | DecisionCard (live variant), ChatPip (panel), StatusPill |
 | `/buyer/decisions` (V) | Every round as a ledger | Winner hero number, each loser with reason and source link, honesty labels, the ranking rule line | DecisionCard |
@@ -28,7 +30,7 @@ Where each concept Vidyut listed appears, so none is only in a doc:
 - Lot Wall: `/lot`, LotWall.
 - Sealed knockout rounds: DecisionCard, the floor, `/buyer` live round.
 - Shield injection screen: floor round 2 (BLOCKED), DecisionCard "Blocked by Shield" row with the rules that fired, AgentRoster row.
-- CRS referee: `royal` pill on every decision and receipt, the referee sprite and call banner on the floor, "verified_stable" wording from the Oct 24 sandbox run.
+- CRS referee: `referee` pill on every decision and receipt, the referee sprite and call banner on the floor, "verified_stable" wording from the Oct 24 sandbox run.
 - Checker (fit and recalls): "Fit confirmed, 304 mm", "No recall, CPSC by brand", floor round 3, the 39 of 39 number.
 - Bright Data live re-check: the "Price" caution line on DecisionCard ("runs when its key is set"), ReceiptCard omits it unless it ran.
 - Apify Actors: `/market` source line "Listings: dated snapshots via Apify (Best Buy, Micro Center, B&H, Newegg; 12 Central Computers rows)", Seller Agent-Readiness Report link on `/sell`.
@@ -48,7 +50,7 @@ const tone = {
   live: "bg-pulse-soft text-pulse", sealed: "bg-slate-soft text-slate",
   eaten: "bg-coral-soft text-coral", blocked: "bg-coral-soft text-coral", vetoed: "bg-coral-soft text-coral", denied: "bg-coral-soft text-coral",
   approved: "bg-mint-soft text-mint", paid: "bg-mint-soft text-mint", verified: "bg-mint-soft text-mint",
-  sim: "bg-amber-soft text-amber", caution: "bg-amber-soft text-amber", mirror: "bg-slate-soft text-slate", referee: "bg-royal-soft text-royal",
+  sim: "bg-amber-soft text-amber", caution: "bg-amber-soft text-amber", mirror: "bg-slate-soft text-slate", referee: "bg-referee-soft text-referee",
 } as const;
 
 export function Pill({ kind, children, pulse = false }: { kind: keyof typeof tone; children: React.ReactNode; pulse?: boolean }) {
@@ -76,7 +78,7 @@ export function Card({ active, className = "", children }: { active?: boolean; c
   return (
     <motion.section
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24, ease: [0.2, 0.8, 0.2, 1] }}
-      className={`rounded-card border bg-surface p-4 shadow-card md:p-5 ${active ? "border-pulse shadow-glow" : "border-line"} ${className}`}
+      className={`rounded-card border bg-surface p-4 shadow-card md:p-5 ${active ? "border-pulse shadow-focus" : "border-line"} ${className}`}
     >{children}</motion.section>
   );
 }
@@ -87,7 +89,7 @@ export function HeroNumber({ value }: { value: number }) {
   const mv = useMotionValue(reduce ? value : 0);
   const text = useTransform(mv, (v) => v.toLocaleString("en-US", { style: "currency", currency: "USD" }));
   useEffect(() => { if (!reduce) animate(mv, value, { duration: 0.9, ease: [0.2, 0.8, 0.2, 1] }); }, [value]);
-  return <motion.div className="font-serif text-[44px] leading-[48px] tabular-nums md:text-[56px] md:leading-[60px]">{text}</motion.div>;
+  return <motion.div className="font-sans text-[44px] leading-[48px] tabular-nums md:text-[56px] md:leading-[60px]">{text}</motion.div>;
 }
 ```
 
@@ -144,7 +146,7 @@ export function AgentRow({ a }: { a: { name: string; job: string; initials: stri
 ```tsx
 export function ChatPip({ messages }: { messages: { from: "you" | "agent"; text: string }[] }) {
   return (
-    <aside aria-label="ASI:One chat, mirrored" className="absolute right-4 top-3.5 w-[22%] min-w-[128px] max-w-[220px] overflow-hidden rounded-xl border border-white/20 bg-[#121620]/92 shadow-pop">
+    <aside aria-label="ASI:One chat, mirrored" className="absolute right-4 top-3.5 w-[22%] min-w-[128px] max-w-[220px] overflow-hidden rounded-xl border border-white/20 bg-[#121620]/92 shadow-lift">
       <div className="flex items-center gap-1.5 border-b border-white/10 px-3 py-2.5 font-mono text-[10px] uppercase tracking-[0.06em] text-[#b7bfcc]"><span className="size-1.5 rounded-full bg-shield shadow-[0_0_0_3px_rgba(111,147,255,0.25)]" />ASI:One · the buyer</div>
       <div className="grid gap-1.5 p-3">{messages.slice(-3).map((m, i) => <div key={i} className={`max-w-[95%] rounded-[10px] px-2 py-1.5 text-[11px] leading-[15px] ${m.from === "you" ? "justify-self-end bg-shield text-[#0b0d12]" : "bg-[#1a1f2b] text-[#edf0f5]"}`}>{m.text}</div>)}</div>
     </aside>

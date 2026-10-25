@@ -11,8 +11,8 @@ import {
 } from "spacetimedb";
 
 export default {
-  supplierId: __t.string(),
-  stability: __t.string(),
-  checkedAt: __t.string(),
-  source: __t.string(),
+  roundId: __t.string(),
+  needId: __t.string(),
+  stageWindowS: __t.u32(),
+  maxStages: __t.u32(),
 };

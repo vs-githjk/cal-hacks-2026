@@ -14,6 +14,14 @@ from uagents_core.contrib.protocols.chat import ChatAcknowledgement, ChatMessage
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACTS = ROOT / "contracts"
 sys.path.insert(0, str(ROOT))  # so agents can import other lanes' code, e.g. `from data.fit_checker import check_fit`
+try:  # the shared quarantine list screen() reads; a sibling of common.py
+    import smell_memory
+except ImportError:  # common.py loaded by file path (demo/bridge.py), so its folder is not on sys.path
+    import importlib.util as _util
+    _spec = _util.spec_from_file_location("smell_memory", Path(__file__).with_name("smell_memory.py"))
+    smell_memory = _util.module_from_spec(_spec)
+    sys.modules["smell_memory"] = smell_memory
+    _spec.loader.exec_module(smell_memory)
 
 # Load agents/.env (gitignored) without overriding real environment variables. Empty values are skipped.
 _ENV = Path(__file__).resolve().parent / ".env"
@@ -88,7 +96,8 @@ def screen(message_id: str, sender: str, text: str, context: dict | None = None)
             if record and result["verdict"] == "allow" and _structured_payee_mismatch(text, record):
                 result.update(verdict="quarantine", reasons=["shield.payee.swap"],
                               rule_ids=["shield.payee.swap"], attack_type="payee_swap")
-            return result
+            memory = smell_memory.default()  # the shared quarantine list: a trick caught once is flagged for every agent
+            return memory.apply(text, result, context) if memory is not None else result
     except Exception:  # fail closed without echoing response bodies or transport details
         return {"message_id": message_id, "sender_agent": sender, "verdict": "block",
                 "reasons": ["shield.unavailable"], "attack_type": "unknown",
@@ -184,6 +193,15 @@ class VoiceTransportRequest(Model):
     variables_json: str   # exactly buyer_name, deal_script, why_answer (pay.voice_cartesia.build_variables)
 
 
+# RT-24: the same request with a deadline. A NEW message, because adding a field to VoiceTransportRequest would change its schema
+# digest and a buyer still on the old code would be silently dropped by the Caller (test_voice_transport_digest pins the old
+# digest). The Caller answers both with VoiceTransportResult: the old one unchanged, this one only while fresh.
+class ExpiringVoiceTransportRequest(Model):
+    mandate_hash: str
+    variables_json: str   # exactly as in VoiceTransportRequest
+    expires_at: str       # ISO 8601 with a zone, at most 10 minutes ahead (agents/caller/relay.py check_expiry)
+
+
 class VoiceTransportResult(Model):
     mandate_hash: str
     call_id: str = ""
@@ -213,10 +231,21 @@ SELLERS = [*CATALOG_SELLERS, *_MIRROR_SEEDS]  # each its own uAgent; seller_6 on
 # tests stay): each only repeats a job above, which Fetch asked us not to show as separate agents.
 RETIRED_SELLERS = {"seller_2": "not run (same job as ReNew Refurb, seller_5)",
                    "seller_4": "not run (same job as Byte Bros Outlet, seller_1)"}
-SELLER_JOBS = {"seller_1": "learns from a loss report: steps its price, never below its floor",
-               "seller_3": "lies: the bid says new, its page says open-box, and the Advocate vetoes it with the source",
-               "seller_5": "bundles refurbished and open-box lines of one part in one bid, condition on every line",
-               "seller_6": "real store: bids a San Francisco store's dated listings (MIRROR) and can never be ordered or paid"}
+SELLER_JOBS = {"seller_1": "learner: steps its margin across rounds from its own losses and wins, never below its floor, and "
+                           "shows a strategy note",
+               "seller_3": "adaptive trickster: rotates a condition lie and an injection line (plus a fee and a warranty lie behind a flag), "
+                           "learns which got caught, and every trick stays catchable",
+               "seller_5": "honest refurbisher: labelled refurbished and open-box lines, the tradeoff in plain words, truthful "
+                           "answers to the Advocate",
+               "seller_6": "live mirror: bids a real store's dated listing as a price anchor, re-checked each round when a Bright "
+                           "Data key is set, and can never be ordered or paid"}
+
+
+def live_sellers() -> list[str]:
+    """The sellers that run: SELLERS without the retired ones (seller_6 only when its private seed is set)."""
+    return [s for s in SELLERS if s not in RETIRED_SELLERS]
+
+
 SELLER_PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013, "seller_4": 8014, "seller_5": 8015,
                 "seller_6": 8016}
 BUILT_IN_ROLES = ("buyer", "advocate", "shield", *CATALOG_SELLERS, *MIRROR_SELLERS)
@@ -239,13 +268,13 @@ def register_custom_seller(role: str) -> None:
     """Give a custom seller (from the Seller Kit) a stable seed so its address survives restarts.
     Set <ROLE>_AGENT_SEED in agents/.env before putting it on Agentverse; the default is public."""
     if role in SEEDS:
-        raise ValueError(f"{role!r} is already a Tech Bazaar agent: a custom seller must not reuse its key")
+        raise ValueError(f"{role!r} is already a Fish Market agent: a custom seller must not reuse its key")
     env = role.upper().replace("-", "_")
     # Both env names a role reads are checked against every name a built-in reads: 'seller-1' and 'seller_1_agent'
     # both land on SELLER_1_AGENT_SEED, 'buyer_agent' on BUYER_AGENT_SEED, so none may reuse a built-in's key.
     owned = {f"{built_in.upper()}{suffix}" for built_in in BUILT_IN_ROLES for suffix in ("_AGENT_SEED", "_SEED")}
     if {f"{env}_AGENT_SEED", f"{env}_SEED"} & owned:
-        raise ValueError(f"{role!r} is already a Tech Bazaar agent: its seed name {env}_AGENT_SEED belongs to a "
+        raise ValueError(f"{role!r} is already a Fish Market agent: its seed name {env}_AGENT_SEED belongs to a "
                          "built-in agent, a custom seller must not reuse its key")
     if _CUSTOM_ENVS.get(env, role) != role:
         raise ValueError(f"{role!r} and {_CUSTOM_ENVS[env]!r} map to the same seed name {env}_AGENT_SEED")
@@ -304,15 +333,26 @@ def address(role: str) -> str:
     return Identity.from_seed(SEEDS[role], 0).address
 
 
-def include_profile_chat(agent, role_text: str):
-    """Discoverability chat explains the role; structured protocols do the work."""
+def include_profile_chat(agent, role_text: str, answer=None, intercept=None):
+    """Discoverability chat explains the role; structured protocols do the work.
+    answer(text) -> str|None: a reply to a screened message (None means send role_text).
+    intercept(ctx, sender, text) -> bool: True when the message belongs to the agent's own conversation (for example a
+    seller's answer to a question the agent asked); it is acknowledged and gets no profile reply."""
     chat = Protocol(spec=chat_protocol_spec)
 
     @chat.on_message(ChatMessage)
     async def on_chat(ctx, sender: str, msg: ChatMessage):
+        if intercept is not None and await intercept(ctx, sender, msg):
+            await ctx.send(sender, ChatAcknowledgement(acknowledged_msg_id=msg.msg_id))
+            return
         verdict = screen(str(msg.msg_id), sender, msg.text())
         await ctx.send(sender, ChatAcknowledgement(acknowledged_msg_id=msg.msg_id))
-        text = role_text if verdict.get("verdict") == "allow" else "Shield blocked this message. No action taken."
+        text = role_text if verdict.get("verdict") == "allow" else "Smell Test blocked this message. No action taken."
+        if answer is not None and verdict.get("verdict") == "allow":
+            try:
+                text = await answer(msg.text()) or role_text
+            except Exception:  # a failed answer falls back to the profile text, never a silent chat
+                text = role_text
         await ctx.send(sender, ChatMessage(content=[TextContent(text=text)]))
 
     @chat.on_message(ChatAcknowledgement)

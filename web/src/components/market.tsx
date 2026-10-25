@@ -3,6 +3,8 @@
 import { clusterArrivals, type FloorEventView, type LearningView, type LossReport, type RoundView, type SellerLine } from "@/lib/screens";
 import type { CrsView } from "@/lib/crs";
 import { CrsSignal } from "./crs";
+import { sourceText } from "@/lib/url";
+import { usePageHost } from "@/lib/useApiBase";
 import { Card, Label, OriginChip, Stat, Tag, Verdict, clock, money } from "./ui";
 
 /**
@@ -171,6 +173,7 @@ function Td({ children, right, className = "" }: { children: React.ReactNode; ri
 const BAND: Record<string, string> = { within5: "within 5%", within10: "within 10%", within20: "within 20%" };
 
 export function LossReports({ reports, note }: { reports: LossReport[]; note?: string }) {
+  const host = usePageHost();
   return (
     <Card>
       <Label>Loss reports · round 1 · {reports.length} sellers</Label>
@@ -186,7 +189,7 @@ export function LossReports({ reports, note }: { reports: LossReport[]; note?: s
                   <Td><span className="font-semibold">{r.seller}</span> <OriginChip origin={r.origin} /></Td>
                   <Td><span className="rounded-md bg-slate-soft px-1.5 py-0.5 font-mono text-[11px] text-slate">{BAND[r.gapBand] ?? r.gapBand}</span></Td>
                   <Td>{r.reason.replaceAll("_", " ")}</Td>
-                  <Td className="text-[13px] text-muted [overflow-wrap:anywhere]">{r.sourceUrl.replace(/^https?:\/\/(www\.)?/, "").split("?")[0]}</Td>
+                  <Td className="text-[13px] text-muted [overflow-wrap:anywhere]">{sourceText(r.sourceUrl, host)}</Td>
                 </tr>
               ))}
             </tbody>

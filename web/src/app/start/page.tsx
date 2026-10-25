@@ -1,5 +1,5 @@
 "use client";
-// Buyer sign-up: a name (and optional phone) creates the account, then the visitor lands on /buyer.
+// Buyer sign-up: a name and a phone (required: purchases are approved by a call) create the account, then the visitor lands on /buyer.
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,7 +8,8 @@ import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
 import { cleanSignUp, gateRoute, signUpErrorText } from "@/lib/signUp";
 
-const field = "w-full min-h-11 rounded-lg border border-line bg-soft px-3 py-2";
+const field = "w-full min-h-11 rounded-xl bg-surface px-4 text-[15px]/[20px] text-ink shadow-ring focus:shadow-[var(--shadow-ring),var(--shadow-focus)] focus:outline-none";
+const primary = "btn inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-pulse px-5 font-medium text-pulse-ink disabled:opacity-60";
 
 export default function StartPage() {
   const router = useRouter();
@@ -47,35 +48,35 @@ export default function StartPage() {
   }
 
   return (
-    <section className="card mx-auto w-full max-w-md p-6">
-      <h1 className="mb-4 text-lg font-semibold">Start as a buyer</h1>
+    <section className="card mx-auto grid w-full max-w-md gap-4 p-4 md:p-6">
+      <h1 className="text-[22px]/[28px] font-semibold tracking-[-0.01em]">Start as a buyer</h1>
       {route === "connecting" ? (
-        <p className="text-sm text-muted">Connecting to the market...</p>
+        <p className="text-[15px]/[20px] text-muted">Connecting to the market...</p>
       ) : route === "buyer" ? (
         <div className="grid gap-3">
-          <p className="text-sm text-muted">This browser already has an account.</p>
-          <Link href="/buyer" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-accent px-4 py-2 font-medium text-accent-ink">
+          <p className="text-[15px]/[20px] text-muted">This browser already has an account.</p>
+          <Link href="/buyer" className={primary}>
             Continue as {shown}
           </Link>
         </div>
       ) : (
         <form className="grid gap-4" onSubmit={onSubmit}>
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1.5 text-[13px]/[18px] font-medium text-ink-2">
             Name
             <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={40} autoComplete="name" className={field} />
           </label>
-          <label className="grid gap-1 text-sm">
-            Phone (optional, only for the approval call)
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" autoComplete="tel" className={field} />
+          <label className="grid gap-1.5 text-[13px]/[18px] font-medium text-ink-2">
+            Phone (we call this number to approve a purchase)
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} required type="tel" autoComplete="tel" placeholder="+1 415 555 0100" className={field} />
           </label>
-          <p className="text-sm text-muted">We never see your card. Payments tonight are sandbox.</p>
-          {error && <p role="alert" className="text-sm text-coral">{error}</p>}
-          <button disabled={submitting} className="min-h-11 w-full rounded-lg bg-accent px-4 py-2 font-medium text-accent-ink disabled:opacity-60">
+          <p className="rounded-xl bg-surface-2 px-4 py-3 text-[13px]/[18px] text-ink-2">We never see your card. Payments tonight are sandbox.</p>
+          {error && <p role="alert" className="text-[13px]/[18px] text-coral">{error}</p>}
+          <button disabled={submitting} className={primary}>
             Create my account
           </button>
         </form>
       )}
-      <Link href="/buyer?pair=1" className="mt-4 inline-flex min-h-11 items-center text-sm text-muted underline">
+      <Link href="/buyer?pair=1" className="inline-flex min-h-11 items-center text-[13px]/[18px] text-muted underline underline-offset-2">
         Have a pairing code from the operator?
       </Link>
     </section>

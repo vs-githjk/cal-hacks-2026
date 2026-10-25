@@ -33,4 +33,5 @@ export default __t.row({
   source: __t.string(),
   sealedAt: __t.timestamp().name("sealed_at"),
   lineRejects: __t.array(__t.string()).name("line_rejects"),
+  stage: __t.u32(),
 });

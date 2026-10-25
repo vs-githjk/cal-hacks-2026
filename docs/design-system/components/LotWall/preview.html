@@ -6,7 +6,7 @@
   .lot { display:grid; grid-template-columns: 1fr 1.4fr; gap:16px; max-width:960px; }
   .wall { display:grid; grid-template-columns: repeat(8, 1fr); gap:6px; }
   .brick { aspect-ratio: 2 / 1; border-radius: 6px; background: var(--slate-soft); border:1px solid var(--line); position:relative; }
-  .brick.real { background: var(--pulse); border-color: var(--pulse); box-shadow: var(--shadow-glow); }
+  .brick.real { background: var(--pulse); border-color: var(--pulse); box-shadow: var(--shadow-focus); }
   .brick.real::after { content:"REAL"; position:absolute; inset:0; display:grid; place-items:center; font:500 10px/1 var(--font-mono); color:var(--pulse-ink); letter-spacing:0.08em; }
   .ladder { display:grid; gap:6px; margin-top:12px; font: 400 13px/18px var(--font-mono); }
   .ladder div { display:flex; justify-content:space-between; gap:8px; padding:6px 10px; border-radius:6px; background:var(--surface-2); }

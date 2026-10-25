@@ -354,6 +354,24 @@ export const roundResult = table(
   },
 );
 
+/**
+ * Private. A knockout stage that leaves the round open writes its knocked_out rows to the public round_result
+ * with rank 0, landed 0 and no lines (a rival still bidding must not read a rival's price or place). The real
+ * values wait here, keyed by the public row's id, and the stage close that finally closes the round copies
+ * them back and deletes these rows.
+ */
+export const roundResultSealed = table(
+  { name: 'round_result_sealed' },
+  {
+    resultId: t.u64().primaryKey(),
+    roundId: t.string().index('btree'),
+    rank: t.u32(),
+    landed: t.f64(),
+    lines: t.array(BidLine),
+    adjustedTotal: t.f64(),
+  },
+);
+
 /** Shown on screen: a rejected approval, payment or bid attempt. No amounts or floors. */
 export const rejectedAttempt = table(
   { name: 'rejected_attempt', public: true },
@@ -462,6 +480,6 @@ const spacetimedb = schema({
   need, needItem, goal, goalItem, notification, owner, role, pairCode, pairAttempt, buyerProfile, signupThrottle, approvalCode, lossReport,
   sellerFloor, bid, bidCheck,
   mandate, approval, payment, allowance, receivingEvent,
-  round, roundResult, rejectedAttempt, floorEvent, agentEvent, stockHold, persona, roundTimer, supplierSignal,
+  round, roundResult, roundResultSealed, rejectedAttempt, floorEvent, agentEvent, stockHold, persona, roundTimer, supplierSignal,
 });
 export default spacetimedb;

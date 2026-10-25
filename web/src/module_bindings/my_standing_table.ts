@@ -11,8 +11,9 @@ import {
 } from "spacetimedb";
 
 export default __t.row({
-  supplierId: __t.string().primaryKey().name("supplier_id"),
-  stability: __t.string(),
-  checkedAt: __t.string().name("checked_at"),
-  source: __t.string(),
+  roundId: __t.string().name("round_id"),
+  stillIn: __t.bool().name("still_in"),
+  reason: __t.string(),
+  lastOfferSkuSpec: __t.string().name("last_offer_sku_spec"),
+  lastOfferPrice: __t.f64().name("last_offer_price"),
 });

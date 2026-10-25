@@ -664,7 +664,9 @@ def test_dry_run_prints_the_steps_touches_nothing_and_exits_zero(capsys, tmp_pat
     monkeypatch.chdir(tmp_path)
     assert build.main(["--dry-run"]) == 0
     out = capsys.readouterr().out
-    assert "post_goal" in out and out.count("post_need") == 7 and out.count("open_round") == 7 and "create_mandate" not in out   # six parts and the board's re-plan
+    assert "post_goal" in out and out.count("post_need") == 7 and out.count("open_knockout_round") == 7 and "create_mandate" not in out   # six parts and the board's re-plan
+    # #363: the market has sealed knockout rounds, so auto picks open_knockout_round for each of the same seven rounds, never the plain open_round
+    assert out.count("open_round") == 0 and out.count("close_stage") >= 7
 
 
 # ---------------------------------------------------------------- #398: the dry run names each payee's CRS status
