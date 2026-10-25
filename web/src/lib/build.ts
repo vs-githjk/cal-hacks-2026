@@ -14,6 +14,8 @@ export interface BuildResult {
   picks: Record<string, BuildPick>;
   budgets: Record<string, number>;
   steps: BuildStep[];
+  /** The build's own label from the feed; absent on SAMPLE_BUILD, which is SIM. */
+  origin?: "LIVE" | "MIRROR" | "SIM";
 }
 
 export const PARTS = ["gpu", "cpu", "motherboard", "memory", "storage", "cooler"] as const;
@@ -21,7 +23,7 @@ export const PART_NAMES: Record<string, string> = {
   gpu: "GPU", cpu: "CPU", motherboard: "Board", memory: "RAM", storage: "SSD", cooler: "Cooler", psu: "Power supply", case: "Case",
 };
 
-export interface PartRow { part: string; label: string; state: "locked" | "swapped" | "open"; name: string; seller: string; price: number | null; budget: number; overBy: number }
+export interface PartRow { part: string; label: string; state: "locked" | "swapped" | "open"; name: string; seller: string; price: number | null; budget: number; overBy: number; origin?: BuildPick["origin"] }
 
 /** One row per part in plan order: what won, from whom, against its budget; a part that clashed and was swapped says so. */
 export function partRows(b: BuildResult): PartRow[] {
@@ -33,7 +35,7 @@ export function partRows(b: BuildResult): PartRow[] {
     return {
       part, label: PART_NAMES[part], budget, price,
       state: !pick ? "open" : swapped.has(part) ? "swapped" : "locked",
-      name: pick?.name ?? "Round open", seller: pick?.seller ?? "",
+      name: pick?.name ?? "Round open", seller: pick?.seller ?? "", origin: pick?.origin,
       overBy: price !== null && price > budget ? Math.round((price - budget) * 100) / 100 : 0,
     };
   });

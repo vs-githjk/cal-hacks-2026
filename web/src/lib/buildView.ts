@@ -101,5 +101,19 @@ export function toBuildResult(v: BuildView): BuildResult {
     picks,
     budgets: Object.fromEntries(bought.map((p) => [PANEL_KEY[p.part], cents(p.budget)])),
     steps,
+    origin: v.origin,
   };
+}
+
+/**
+ * The live build, or null when none is posted (404, or a null body). Throws visibly on an unreachable feed, HTTP error,
+ * non-JSON body or wrong shape. ponytail: GET /v1/build on the agent feed is this lane's proposal; Lane D owns where the
+ * BuildView is served, so change this one URL when it lands.
+ */
+export async function fetchBuild(feedUrl: string, signal?: AbortSignal): Promise<BuildView | null> {
+  const res = await fetch(`${feedUrl}/v1/build`, { signal, cache: "no-store" });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`build feed answered HTTP ${res.status}`);
+  const body: unknown = await res.json();
+  return body === null ? null : parseBuildView(body);
 }

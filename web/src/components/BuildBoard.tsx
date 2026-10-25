@@ -23,7 +23,9 @@ export function BuildBoard({ build, origin }: { build: BuildResult; origin?: str
     const t = setTimeout(() => setUpTo((n) => n + 1), STEP_MS);
     return () => clearTimeout(t);
   }, [playing, upTo, total]);
-  const now = buildAt(build, upTo);
+  // A live build (it carries its feed origin) is drawn as it stands: its events have no per-part pick step to replay.
+  const live = !!build.origin;
+  const now = live ? build : buildAt(build, upTo);
   const btn = "rounded-md border border-line-2 px-2.5 py-1 text-[12px] font-semibold disabled:opacity-40";
   return (
     <div className="grid gap-3.5 lg:grid-cols-[7fr_5fr]">
@@ -31,11 +33,11 @@ export function BuildBoard({ build, origin }: { build: BuildResult; origin?: str
       <Card>
         <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
           <Label>What the agent did</Label>
-          <div className="flex gap-1.5">
+          {!live && <div className="flex gap-1.5">
             <button className={btn} onClick={() => { if (upTo >= total) setUpTo(1); setPlaying(true); }} disabled={playing}>Play</button>
             <button className={btn} onClick={() => { setPlaying(false); setUpTo((n) => Math.min(total, n + 1)); }} disabled={upTo >= total}>Next</button>
             <button className={btn} onClick={() => { setPlaying(false); setUpTo(1); }}>Reset</button>
-          </div>
+          </div>}
         </div>
         <ol className="grid gap-1.5" aria-live="polite">
           {now.steps.map((s, i) => (

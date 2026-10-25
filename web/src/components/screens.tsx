@@ -89,7 +89,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
             </Card>
           )}
           <Searches goals={p.goals} />
-          <SampleOnly on={!p.build}><BuildBoard build={p.build ?? SAMPLE_BUILD} origin={p.build ? "LIVE" : "SIM"} /></SampleOnly>
+          <SampleOnly on={!p.build}><BuildBoard build={p.build ?? SAMPLE_BUILD} origin={p.build?.origin ?? "SIM"} /></SampleOnly>
           <div className="grid gap-3.5 md:grid-cols-3">
             {p.purchases ?? <Unavailable title="Recent purchases">Recorded purchases are not connected to this screen yet.</Unavailable>}
             <AllowancePanel allowance={p.allowance} cap={goal?.cap ?? null} />

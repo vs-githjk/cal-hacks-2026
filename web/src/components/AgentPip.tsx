@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { OriginChip } from "@/components/ui";
 import { AgentAvatar, useAgents } from "@/components/useAgents";
+import { useLiveBuild } from "@/components/useLiveBuild";
 import { planLines, SAMPLE_BUILD, type BuildResult, type StepKind } from "@/lib/build";
 import {
   ASI_ONE_URL,
@@ -37,7 +38,7 @@ const CORNER_CLASS: Record<Corner, string> = {
 const PLAN_TONE: Partial<Record<StepKind, string>> = { clash: "text-coral", swap: "text-mint", locked: "text-mint", reallocate: "text-amber", blocked: "text-coral" };
 const PLAN_LABEL: Partial<Record<StepKind, string>> = { plan: "Plan", clash: "Clash", swap: "Re-plan", reallocate: "Budget", locked: "Locked", blocked: "Blocked" };
 
-/** The buyer agent's build plan and re-plans, above the agent rows. SAMPLE_BUILD (SIM) until a live build is passed in. */
+/** The buyer agent's build plan and re-plans, above the agent rows. The live build (useLiveBuild); SAMPLE_BUILD, labelled SIM, only while none is posted. */
 function BuildPlan({ build, origin }: { build: BuildResult; origin: string }) {
   return (
     <section aria-label="Build plan" className="border-b border-line pb-2">
@@ -93,6 +94,7 @@ export function AgentPip() {
 function AgentPipTile() {
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
   const { rows, now } = useAgents();
+  const liveBuild = useLiveBuild();
   const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
   const box = useRef<HTMLElement>(null);
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -176,7 +178,7 @@ function AgentPipTile() {
       {prefs.open ? (
         <>
           <div className="min-h-0 flex-1 overflow-y-auto border-t border-line px-3 py-2">
-            <BuildPlan build={SAMPLE_BUILD} origin="SIM" />
+            <BuildPlan build={liveBuild ?? SAMPLE_BUILD} origin={liveBuild?.origin ?? "SIM"} />
             {offline || pending || shown.length === 0 ? (
               <p className="py-3 text-muted">
                 {pending

@@ -5,6 +5,7 @@ import { useReducer, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
 import { useBuyerId } from "@/components/BuyerGate";
 import { GoalComposer } from "@/components/GoalComposer";
+import { useLiveBuild } from "@/components/useLiveBuild";
 import { RecentPurchases } from "@/components/memory";
 import { BuyerScreen } from "@/components/screens";
 import { allowanceForBuyer, asSim, bidsFromRows, feedFromRows, goalsForBuyer, latestRound, reviewFromRows } from "@/lib/screens";
@@ -41,9 +42,11 @@ export default function BuyerPage() {
     }
   };
 
+  const liveBuild = useLiveBuild();
   // veto, shield, approval and receipt rows (bid_check, mandate, approval, payment) are not public yet: those cards show the SIM sample.
   return (
     <BuyerScreen
+      build={liveBuild ?? undefined}
       connecting={!goalsReady || !eventsReady}
       goals={goals}
       allowance={allowance}
