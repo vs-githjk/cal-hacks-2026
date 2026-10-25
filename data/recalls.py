@@ -32,12 +32,38 @@ def _model_tokens(title, brand):
         - set(brand.lower().split())
 
 
+def brand_in(brand: str, text: str) -> bool:
+    """The brand as a whole word: "Anker" is not inside "Trankerloop"."""
+    return bool(re.search(rf"(?<![a-z0-9]){re.escape(brand.strip().lower())}(?![a-z0-9])", text.lower()))
+
+
+def brand_items(brand: str, fetch=None, now=None, cache_dir=None):
+    """-> (checked_at, items, url): the CPSC answer for ProductName=<brand>, cached per brand for 24 hours.
+    Raises on a fetch or parse failure; items may be a non-list when the API answers oddly (the caller decides)."""
+    now = now or datetime.now(timezone.utc)
+    cache_dir = Path(cache_dir) if cache_dir else CACHE
+    url = API + quote(brand)
+    cached = _cached(brand, now, cache_dir)
+    if cached:
+        return cached[0], cached[1], url
+    if fetch is None:  # only then: an Actor bundle passes its own fetch and does not ship data.claim_check
+        from data.claim_check.fetch import guarded_get as fetch
+    body = fetch(url)
+    items = json.loads(body.decode("utf-8") if isinstance(body, (bytes, bytearray)) else body)
+    checked_at = now.isoformat(timespec="seconds")
+    if isinstance(items, list):
+        cache_dir.mkdir(exist_ok=True)
+        (cache_dir / f"{re.sub(r'[^a-z0-9]+', '-', brand.lower())}-{now:%Y%m%d}.json").write_text(json.dumps(
+            {"origin": "MIRROR", "brand": brand, "checked_at": checked_at, "source_url": url, "items": items}, indent=1) + "\n")
+    return checked_at, items, url
+
+
 def _matches(item, brand, title):
     """Brand AND a graphics-card word AND a model token from the product title, all in the recall. Generic words alone never match."""
     names = [str(item.get("Title") or "")] + [str(p.get("Name") or "") for p in item.get("Products") or []]
     makers = [str(m.get("Name") or "") for m in item.get("Manufacturers") or []]
     hay = " ".join(names + makers).lower()
-    if brand.lower() not in hay:
+    if not brand_in(brand, hay):
         return False
     product_text = " ".join(names).lower()
     if not any(re.search(rf"\b{re.escape(t)}\b", product_text) for t in GPU_TERMS):
@@ -51,22 +77,11 @@ def recalls_for(product_title: str, brand: str, fetch=None, now=None, cache_dir=
         return {"status": "unverified", "recalls": [], "checked_at": now.isoformat(timespec="seconds"), "source_url": None,
                 "reason": "no brand given, so no recall lookup was made"}
     brand = brand.strip()
-    cache_dir = Path(cache_dir) if cache_dir else CACHE
-    url = API + quote(brand)
-    out = {"status": "unverified", "recalls": [], "checked_at": now.isoformat(timespec="seconds"), "source_url": url}
+    out = {"status": "unverified", "recalls": [], "checked_at": now.isoformat(timespec="seconds"), "source_url": API + quote(brand)}
     try:
-        cached = _cached(brand, now, cache_dir)
-        if cached:
-            out["checked_at"], items = cached
-        else:
-            from data.claim_check.fetch import guarded_get
-            body = (fetch or guarded_get)(url)
-            items = json.loads(body.decode("utf-8") if isinstance(body, (bytes, bytearray)) else body)
-            if not isinstance(items, list):
-                return out
-            cache_dir.mkdir(exist_ok=True)
-            (cache_dir / f"{re.sub(r'[^a-z0-9]+', '-', brand.lower())}-{now:%Y%m%d}.json").write_text(json.dumps(
-                {"origin": "MIRROR", "brand": brand, "checked_at": out["checked_at"], "source_url": url, "items": items}, indent=1) + "\n")
+        out["checked_at"], items, _ = brand_items(brand, fetch=fetch, now=now, cache_dir=cache_dir)
+        if not isinstance(items, list):
+            return out
         found = [{"title": i.get("Title"), "date": str(i.get("RecallDate") or "")[:10], "url": i.get("URL")}
                  for i in items if isinstance(i, dict) and _matches(i, brand, product_title)]
     except (OSError, ValueError, TypeError, AttributeError, KeyError) as e:  # any failure: we do not know, so never "none"

@@ -127,9 +127,9 @@ export function SellerLines({ lines, cap }: { lines: SellerLine[]; cap: number |
                 const fill = o.kind === "won" ? "bg-mint" : dim ? "bg-slate opacity-50" : l.origin === "SIM" ? "bg-amber" : l.origin === "LIVE" ? "bg-mint" : "bg-sky";
                 return (
                   <tr key={i} className={o.kind === "won" ? "bg-mint-soft" : dim ? "text-muted" : ""}>
-                    <Td><span className="font-semibold text-ink">{l.seller}</span> <OriginChip origin={l.origin} /></Td>
+                    <Td><span className="font-semibold text-ink">{l.seller}</span> <OriginChip origin={l.origin} />{o.kind === "won" && <> <Tag>Winner</Tag></>}</Td>
                     <Td><Tag>{l.condition}</Tag>{o.kind === "alt" && <span className="ml-1.5 text-[13px] text-muted">alt</span>}</Td>
-                    <Td right>{o.kind === "refused" && l.landed === 0 ? "·" : o.kind === "won" ? <b>{money(l.landed)}</b> : money(l.landed)}</Td>
+                    <Td right className="tabular-nums">{o.kind === "refused" && l.landed === 0 ? "·" : o.kind === "won" ? <b>{money(l.landed)}</b> : money(l.landed)}</Td>
                     <Td>
                       <div className="relative h-2.5 min-w-[120px] rounded-[5px] bg-soft">
                         <b className={`absolute inset-y-0 left-0 rounded-[5px] ${fill}`} style={{ width: `${Math.min(100, (l.landed / scale) * 100)}%` }} />
@@ -140,6 +140,7 @@ export function SellerLines({ lines, cap }: { lines: SellerLine[]; cap: number |
                     <Td>
                       {o.kind === "won" && <Verdict kind="buy">won</Verdict>}
                       {o.kind === "ranked" && <Verdict kind="buy">buy</Verdict>}
+                      {o.kind === "held" && <><Verdict kind="caution">held back</Verdict> <span className="text-[13px] text-muted">{o.note?.replace(/^held back: /, "")}</span></>}
                       {o.kind === "veto" && <><Verdict kind="veto">veto</Verdict> <span className="text-[13px] text-muted">{o.note}</span></>}
                       {(o.kind === "ineligible" || o.kind === "alt") && <span className="text-[13px] text-muted">{o.kind === "alt" ? o.note : `ineligible, ${o.note}`}</span>}
                       {o.kind === "refused" && <span className="text-[13px] text-muted">never seen</span>}
@@ -197,10 +198,10 @@ export function SellerLearns({ learning }: { learning: LearningView | null }) {
   if (!learning) return <Card><Label>Seller learns</Label><p className="text-muted">After the round, one losing seller updates its strategy. The diff shows here.</p></Card>;
   return (
     <Card>
-      <Label>Seller learns · {learning.seller} <OriginChip origin={learning.origin} /></Label>
+      <div className="flex items-center justify-between gap-2"><Label>Seller learns · {learning.seller}</Label><OriginChip origin={learning.origin} /></div>
       <div className="rounded-xl border-l-[3px] border-accent bg-soft px-3.5 py-3 text-[15px]">
-        "{learning.whatToChange}"
-        <small className="mt-1 block text-[12px] text-muted">Claude's one line to the owner ({learning.whatToChangeOrigin} in this run)</small>
+        &quot;{learning.whatToChange}&quot;
+        <small className="mt-1 block text-[12px] text-muted">Claude&apos;s one line to the owner ({learning.whatToChangeOrigin} in this run)</small>
       </div>
       <dl className="mt-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 font-mono text-[13px]">
         {learning.diff.map((d) => (

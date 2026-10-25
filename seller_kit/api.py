@@ -37,6 +37,7 @@ sys.path.insert(0, str(AGENTS / "sellers"))
 from factory import ConfigError, validate_config  # noqa: E402
 
 from shield.api import BodyLimit  # noqa: E402  (413 before any parsing, same limit as the other local APIs)
+from seller_kit import ucp  # noqa: E402
 
 # SIM sample needs shown when no real source is wired in. Same SKUs the demo sellers list.
 SIM_NEEDS: list[dict] = [
@@ -111,10 +112,11 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
     folder = Path(os.path.abspath(custom_dir or CUSTOM_DIR))
     # replace=true overwrites a shop's config, and the kit cannot tell one shop from another: only the operator may.
     operator = operator_token if operator_token is not None else os.environ.get(OPERATOR_ENV, "")
+    operator = operator.strip()   # a blank or whitespace token is unset: replace stays refused (#237)
     lock = threading.Lock()
     app = FastAPI(title="Tech Bazaar Seller Kit", docs_url=None, redoc_url=None, openapi_url=None)
     app.add_middleware(BodyLimit)
-    app.add_middleware(CORSMiddleware, allow_origin_regex=r"^http://(localhost|127\.0\.0\.1)(:\d+)?$", allow_methods=["GET", "POST"],
+    app.add_middleware(CORSMiddleware, allow_origin_regex=r"^http://(localhost|127\.0\.0\.1)(:\d+)?$", allow_methods=["GET", "POST", "PUT"],
                        allow_headers=["content-type", OPERATOR_HEADER])
 
     @app.get("/v1/health")
@@ -194,6 +196,77 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
     @app.get("/v1/needs/open")
     def needs() -> list[dict]:
         return open_needs(needs_source)
+
+    # ---- #261: UCP on each kit shop (UCP draft spec 2026-01-11, not certified). No money moves through these routes.
+    sessions = ucp.Sessions()
+
+    def _shop(shop_id: str):
+        shop = ucp.load_shop(folder, shop_id, validate_config)
+        return shop if shop is not None and shop["id"] == shop_id else None
+
+    async def _body(request: Request):
+        try:
+            body = await request.json()
+        except (ValueError, UnicodeDecodeError, RecursionError):
+            return None
+        return body if isinstance(body, dict) else None
+
+    def _no_shop():
+        return JSONResponse({"messages": [ucp._error("not_found", "no such shop")]}, status_code=404)
+
+    def _bad_body():
+        return JSONResponse({"messages": [ucp._error("invalid_request", "the body must be a JSON object")]}, status_code=400)
+
+    @app.get("/ucp/{shop_id}/.well-known/ucp")
+    def ucp_profile(shop_id: str, request: Request):
+        shop = _shop(shop_id)
+        return JSONResponse(ucp.profile(shop, str(request.base_url))) if shop else _no_shop()
+
+    @app.post("/ucp/{shop_id}/checkout-sessions")
+    async def ucp_create(shop_id: str, request: Request):
+        shop, body = _shop(shop_id), await _body(request)
+        if not shop:
+            return _no_shop()
+        if body is None:
+            return _bad_body()
+        status, out = sessions.create(shop, body)
+        return JSONResponse(out, status_code=status)
+
+    @app.get("/ucp/{shop_id}/checkout-sessions/{session_id}")
+    def ucp_get(shop_id: str, session_id: str):
+        shop = _shop(shop_id)
+        s = sessions.get(shop, session_id) if shop else None
+        return JSONResponse(ucp.view(s)) if s else JSONResponse({"messages": [ucp._error("not_found", "no such checkout session")]},
+                                                               status_code=404)
+
+    @app.put("/ucp/{shop_id}/checkout-sessions/{session_id}")
+    async def ucp_update(shop_id: str, session_id: str, request: Request):
+        shop, body = _shop(shop_id), await _body(request)
+        if not shop:
+            return _no_shop()
+        if body is None:
+            return _bad_body()
+        status, out = sessions.update(shop, session_id, body)
+        return JSONResponse(out, status_code=status)
+
+    @app.post("/ucp/{shop_id}/checkout-sessions/{session_id}/complete")
+    async def ucp_complete(shop_id: str, session_id: str, request: Request):
+        from pay.mandate import verify
+        shop, body = _shop(shop_id), await _body(request)
+        if not shop:
+            return _no_shop()
+        if body is None:
+            return _bad_body()
+        status, out = sessions.complete(shop, session_id, body, verify)
+        return JSONResponse(out, status_code=status)
+
+    @app.post("/ucp/{shop_id}/checkout-sessions/{session_id}/cancel")
+    def ucp_cancel(shop_id: str, session_id: str):
+        shop = _shop(shop_id)
+        if not shop:
+            return _no_shop()
+        status, out = sessions.cancel(shop, session_id)
+        return JSONResponse(out, status_code=status)
 
     return app
 

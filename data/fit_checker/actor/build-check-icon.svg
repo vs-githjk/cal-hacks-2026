@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#312e81"/></linearGradient></defs>
+  <rect width="512" height="512" rx="104" fill="url(#g)"/>
+  <!-- PC case -->
+  <rect x="110" y="96" width="210" height="300" rx="26" fill="#ffffff"/>
+  <rect x="140" y="130" width="150" height="70" rx="12" fill="#c7d2fe"/>
+  <circle cx="215" cy="165" r="22" fill="#312e81"/>
+  <!-- graphics card -->
+  <rect x="140" y="228" width="150" height="40" rx="10" fill="#312e81"/>
+  <circle cx="172" cy="248" r="11" fill="#c7d2fe"/><circle cx="208" cy="248" r="11" fill="#c7d2fe"/><circle cx="244" cy="248" r="11" fill="#c7d2fe"/>
+  <rect x="140" y="292" width="150" height="16" rx="8" fill="#c7d2fe"/>
+  <rect x="140" y="322" width="96" height="16" rx="8" fill="#c7d2fe"/>
+  <!-- check badge -->
+  <circle cx="360" cy="360" r="92" fill="#34d399" stroke="#312e81" stroke-width="16"/>
+  <path d="M316 362 l30 30 l58 -64" fill="none" stroke="#312e81" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
