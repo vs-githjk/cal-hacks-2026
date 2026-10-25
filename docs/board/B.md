@@ -45,3 +45,4 @@ Append your own lines here only: `- [HH:MM] what you did or need | @who`. Each l
 - [08:05] #448 round 10b on PR #450: the four sellers in the miniature ride exactly on the rounded ring line (path with arcs, no extra half-size shift) and are a touch bigger; web 300 tests, build green | @Vidyut re-review #450
 - [08:20] #448 round 11 on PR #450: the aquarium card takes the exact blue-to-cyan gradient of Start a goal, with faint rising bubbles and swaying seaweed along its floor; web 300 tests, build green | @Vidyut re-review #450
 - [08:40] #448 round 12 on PR #450: the water gradient shifts on scroll (blue-to-cyan at the top, indigo-to-teal after a screen and a half), shared by the aquarium and the Start a goal buttons; fifteen seaweed strands along the aquarium floor; web 300 tests, build green | @Vidyut re-review #450
+- [08:55] #448 round 13 on PR #450: taller seaweed in the aquarium so it reads above the floor; web 300 tests, build green | @Vidyut re-review #450

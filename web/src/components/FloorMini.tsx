@@ -78,33 +78,33 @@ export function FloorMini({ className = "" }: { className?: string }) {
 /** Faint seaweed along the aquarium floor: five strands that sway. Decorative. */
 function Seaweed() {
   const strands = [
-    { x: 14, h: 40, sway: "5.4s", delay: "-0.5s" },
-    { x: 30, h: 62, sway: "6.2s", delay: "-2s" },
-    { x: 48, h: 34, sway: "4.8s", delay: "-1s" },
-    { x: 70, h: 74, sway: "6.6s", delay: "-3s" },
-    { x: 92, h: 46, sway: "5.1s", delay: "-1.6s" },
-    { x: 118, h: 30, sway: "4.5s", delay: "-0.8s" },
-    { x: 160, h: 38, sway: "5.6s", delay: "-2.4s" },
-    { x: 215, h: 26, sway: "4.7s", delay: "-1.2s" },
-    { x: 262, h: 32, sway: "5.0s", delay: "-2.8s" },
-    { x: 318, h: 42, sway: "5.9s", delay: "-0.3s" },
-    { x: 362, h: 28, sway: "4.6s", delay: "-1.9s" },
-    { x: 398, h: 56, sway: "6.0s", delay: "-3.4s" },
-    { x: 426, h: 36, sway: "5.2s", delay: "-0.9s" },
-    { x: 448, h: 66, sway: "6.4s", delay: "-2.2s" },
-    { x: 468, h: 44, sway: "4.9s", delay: "-1.4s" },
+    { x: 14, h: 62, sway: "5.4s", delay: "-0.5s" },
+    { x: 30, h: 96, sway: "6.2s", delay: "-2s" },
+    { x: 48, h: 53, sway: "4.8s", delay: "-1s" },
+    { x: 70, h: 115, sway: "6.6s", delay: "-3s" },
+    { x: 92, h: 71, sway: "5.1s", delay: "-1.6s" },
+    { x: 118, h: 46, sway: "4.5s", delay: "-0.8s" },
+    { x: 160, h: 59, sway: "5.6s", delay: "-2.4s" },
+    { x: 215, h: 40, sway: "4.7s", delay: "-1.2s" },
+    { x: 262, h: 50, sway: "5.0s", delay: "-2.8s" },
+    { x: 318, h: 65, sway: "5.9s", delay: "-0.3s" },
+    { x: 362, h: 43, sway: "4.6s", delay: "-1.9s" },
+    { x: 398, h: 87, sway: "6.0s", delay: "-3.4s" },
+    { x: 426, h: 56, sway: "5.2s", delay: "-0.9s" },
+    { x: 448, h: 102, sway: "6.4s", delay: "-2.2s" },
+    { x: 468, h: 68, sway: "4.9s", delay: "-1.4s" },
   ];
   return (
-    <svg className="pointer-events-none absolute inset-x-0 bottom-0 h-[90px] w-full" viewBox="0 0 480 90" preserveAspectRatio="none" aria-hidden>
+    <svg className="pointer-events-none absolute inset-x-0 bottom-0 h-[130px] w-full" viewBox="0 0 480 130" preserveAspectRatio="none" aria-hidden>
       {strands.map((s) => (
         <path
           key={s.x}
           className="fm-weed"
-          style={{ transformOrigin: `${s.x}px 90px`, ["--sway" as string]: s.sway, ["--delay" as string]: s.delay }}
-          d={`M ${s.x} 90 C ${s.x - 6} ${90 - s.h * 0.35}, ${s.x + 8} ${90 - s.h * 0.65}, ${s.x} ${90 - s.h}`}
+          style={{ transformOrigin: `${s.x}px 130px`, ["--sway" as string]: s.sway, ["--delay" as string]: s.delay }}
+          d={`M ${s.x} 130 C ${s.x - 7} ${130 - s.h * 0.35}, ${s.x + 9} ${130 - s.h * 0.65}, ${s.x} ${130 - s.h}`}
           fill="none"
-          stroke="rgba(11,27,43,0.28)"
-          strokeWidth="5"
+          stroke="rgba(11,27,43,0.32)"
+          strokeWidth="6"
           strokeLinecap="round"
         />
       ))}
