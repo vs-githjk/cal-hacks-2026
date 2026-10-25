@@ -7,7 +7,7 @@ import { tables } from "@/module_bindings";
 import { Floor3D, hasWebGL } from "@/components/Floor3D";
 import { Card, Code, Label, OriginChip, SourceLink } from "@/components/ui";
 import { AGENTVERSE_URL, shortAddress, type AgentInfo } from "@/lib/agents";
-import { POLL_MS, fetchAgents, type AgentStatus } from "@/lib/agentFeed";
+import { FEED_ENV, POLL_MS, feedBase, fetchAgents, type AgentStatus } from "@/lib/agentFeed";
 import { agentFor, bubbleText, bubblesFrom, type AgentEventLike } from "@/lib/arenaAgents";
 import { SAMPLES, SAMPLE_AGENT_LINES } from "@/lib/arenaFixture";
 import { IDLE, isEmptyMarket, playback, projectArenaScene, storyFor, type ActorKey, type ArenaRows, type ArenaScene, type Playback, type PlaybackAction, type SceneOffer, type Story } from "@/lib/arenaScene";
@@ -383,8 +383,9 @@ function useAgentStatus(address: string | null): string | null {
     if (!address) return;
     let live = true;
     const ctl = new AbortController();
+    const base = feedBase(FEED_ENV, window.location.hostname);
     const poll = async () => {
-      const feed = await fetchAgents(ctl.signal);
+      const feed = base ? await fetchAgents(base, ctl.signal) : null;
       const mine = feed?.find((r) => r.address === address);
       if (live) setSeen({ address, text: mine ? STATUS_WORD[mine.status] : "Status unknown" });
     };

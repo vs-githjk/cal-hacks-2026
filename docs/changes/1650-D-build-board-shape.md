@@ -3,7 +3,7 @@
 For Vedant (#343, the build board), Abhinav (#344, the planner) and Lane D (#345, the market and approval). Build the board against `contracts/samples/build-board.sample.json` now. The live data arrives in the same shape.
 
 ## A build in the market (existing tables, no schema change for the board's first version)
-- **One build** is one `goal` row (`type: "build"`) with one `goal_item` per part.
+- **One build** is one `goal` row (`type: "build_by_date"`, the market's goal enum; there is no "build" type) with one `goal_item` per part.
   - An owned part is a `goal_item` with `skippedOwnedPartId` set, for example the buyer's 750 W PSU and case.
 - **Each part that is bought** gets its own `need`, with `need.goalId` equal to the goal id and one `need_item`. Each need gets its own `round`, with knockout stages per #336. `round_result` rows give each part's bids, ranks and reasons.
 - **A part's champion** is the rank 1 `round_result` of its round once the round is closed.

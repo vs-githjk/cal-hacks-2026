@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { ASI_ONE_URL } from "@/lib/agentFeed";
 import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
+import { AllowancePanel, OwnedPartsPanel, PanelPreviews } from "./panels";
 import { Card, Label, Pill, SampleOnly, Unavailable, money } from "./ui";
 
 
@@ -63,31 +64,13 @@ function Searches({ goals }: { goals: GoalView[] }) {
   );
 }
 
-function SpendingRules({ allowance: a }: { allowance: GoalView["allowance"] }) {
-  return (
-    <Card>
-      <Label>Spending rules</Label>
-      {!a ? (
-        <p className="text-[13px] text-muted">No spending rule is recorded for you yet.</p>
-      ) : a.perPurchase > 0 ? (
-        <>
-          <p className="text-[28px] font-semibold tracking-[-0.02em] tabular-nums">{money(a.perPurchase)}</p>
-          <p className="mt-1 text-[13px] tabular-nums text-muted">per buy without a call. {money(a.spent)} of {money(a.periodLimit)} used this {a.period}, step {a.ladderStep}.</p>
-        </>
-      ) : (
-        <p className="text-[18px] font-medium">Every buy calls you first.</p>
-      )}
-    </Card>
-  );
-}
-
 export function BuyerScreen(p: BuyerScreenProps) {
   const s = p.sample ?? {};
   const goal = p.goals[0] ?? null;
   return (
     <div className="grid gap-3.5">
       {p.connecting ? (
-        <p className="text-muted">Connecting to the market...</p>
+        <PanelPreviews reason="Connecting to the market. Each panel fills in when it answers." />
       ) : (
         <>
           {p.composer}
@@ -102,8 +85,8 @@ export function BuyerScreen(p: BuyerScreenProps) {
           <Searches goals={p.goals} />
           <div className="grid gap-3.5 md:grid-cols-3">
             {p.purchases ?? <Unavailable title="Recent purchases">Recorded purchases are not connected to this screen yet.</Unavailable>}
-            <SpendingRules allowance={p.allowance} />
-            <Unavailable title="Owned parts">No approved buyer-private record of owned parts exists yet, so none are listed.</Unavailable>
+            <AllowancePanel allowance={p.allowance} cap={goal?.cap ?? null} />
+            <OwnedPartsPanel />
           </div>
           {goal && (
             <>
