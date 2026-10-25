@@ -36,3 +36,21 @@ def test_one_png_avatar_per_agent_and_the_caller_is_pink():
     idat = raw[raw.index(b"IDAT") + 4: raw.index(b"IEND") - 8]
     first_pixel = zlib.decompress(idat)[1:4]
     assert tuple(first_pixel) == (255, 79, 163)
+
+
+@pytest.mark.parametrize("role", ["buyer", "advocate", "shield", "caller", *(f"seller_{i}" for i in range(1, 6))])
+def test_every_agent_publishes_its_avatar_url_to_agentverse(monkeypatch, role):
+    import common
+    monkeypatch.delenv("AGENT_AVATAR_BASE", raising=False)
+    monkeypatch.setitem(common.SEEDS, role, "offline-private-example")
+    url = common.agent_args(role, 8003)["avatar_url"]
+    assert url == f"https://raw.githubusercontent.com/vs-githjk/cal-hacks-2026/main/agents/avatars/{role}.png"
+
+
+def test_avatar_url_override_and_roles_without_a_file(monkeypatch):
+    import common
+    monkeypatch.setenv("AGENT_AVATAR_BASE", "https://example.test/av/")
+    assert common.avatar_url("buyer") == "https://example.test/av/buyer.png"
+    assert common.avatar_url("pulse") is None
+    monkeypatch.setitem(common.SEEDS, "seller_1", "offline-private-example")
+    assert common.agent_args("seller_1", 8011, avatar_url="https://x.test/a.png")["avatar_url"] == "https://x.test/a.png"
