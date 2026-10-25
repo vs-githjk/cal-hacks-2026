@@ -108,7 +108,7 @@ export function catalogSku(text: string): string | null {
   if (/\b(?:rtx\s*)?4070\s*super\b/.test(t)) return "rtx 4070 super 12gb";
   if (/\b(?:rx\s*)?7800\s*xt\b/.test(t)) return "rx 7800 xt 16gb";
   if (/\b(?:rtx|rx|gtx)\s*\d{3,4}/.test(t) || /(?<![$\d,.])\b\d{4}\s*(?:ti|super|xt|gpu|graphics|video)\b/.test(t)) return null;
-  const watts = /\b(\d{3,4})\s*-?\s*w\b/.exec(t);
+  const watts = /\b(\d{3,4})\s*-?\s*w(?:atts?)?\b/.exec(t);
   if (watts) return watts[1] === "850" ? "psu 850w" : watts[1] === "750" ? "psu 750w" : null;
   if (/\b(?:psu|power supply)\b/.test(t)) return "psu 750w";
   if (/\b(?:pc case|case|mid-tower|full-tower|mini-tower)\b/.test(t)) return "case";
