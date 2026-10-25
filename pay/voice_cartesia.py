@@ -106,19 +106,92 @@ class NoPhone(CartesiaError):
 DEFAULT_APPROVAL_BUYER = "vidyut"
 
 
-def approval_phone(buyer_id: str, env: Mapping[str, str], default_buyer_id: str = DEFAULT_APPROVAL_BUYER) -> Optional[str]:
+# The market view only the referee can read: one row per buyer with the phone they gave at sign-up (market/spacetimedb/src/schema.ts AgentBuyerContactRow).
+BUYER_CONTACT_VIEW = "agent_buyer_contact"
+_BUYER_ID = re.compile(r"[A-Za-z0-9_.-]{1,64}")
+PhoneLookup = Callable[[str], Optional[str]]
+
+
+def valid_e164(number: Any) -> bool:
+    return isinstance(number, str) and _E164.fullmatch(number) is not None
+
+
+def phone_lookup_from_sql(sql: Callable[[str], Any]) -> PhoneLookup:
+    """A lookup for one buyer's own phone, from a referee-identity `sql(query)` (market/scripts/stdb.py Market.sql: positional rows
+    [buyer_id, phone]; dict rows work too). Only a row whose own buyer_id equals the one asked for counts, so another buyer's row can
+    never be returned. Any odd id or any failure is None (the caller then fails closed). The number is never logged or put in an error."""
+    def lookup(buyer_id: str) -> Optional[str]:
+        if not isinstance(buyer_id, str) or not _BUYER_ID.fullmatch(buyer_id):
+            return None
+        try:
+            rows = sql(f"SELECT buyer_id, phone FROM {BUYER_CONTACT_VIEW} WHERE buyer_id = '{buyer_id}'")
+            for row in rows or []:
+                rid, phone = (row.get("buyer_id"), row.get("phone")) if isinstance(row, Mapping) else (row[0], row[1])
+                if rid == buyer_id:
+                    return phone if isinstance(phone, str) else None
+        except Exception:
+            return None
+        return None
+    return lookup
+
+
+def name_lookup_from_sql(sql: Callable[[str], Any]) -> PhoneLookup:
+    """Like phone_lookup_from_sql, for the buyer's own display_name from the same agent_buyer_contact view (rows [buyer_id, display_name]).
+    Only the row whose own buyer_id matches counts; any odd id or failure is None."""
+    def lookup(buyer_id: str) -> Optional[str]:
+        if not isinstance(buyer_id, str) or not _BUYER_ID.fullmatch(buyer_id):
+            return None
+        try:
+            rows = sql(f"SELECT buyer_id, display_name FROM {BUYER_CONTACT_VIEW} WHERE buyer_id = '{buyer_id}'")
+            for row in rows or []:
+                rid, name = (row.get("buyer_id"), row.get("display_name")) if isinstance(row, Mapping) else (row[0], row[1])
+                if rid == buyer_id:
+                    return name if isinstance(name, str) else None
+        except Exception:
+            return None
+        return None
+    return lookup
+
+
+GENERIC_GREETING = "there"
+
+
+def greeting_name(buyer_id: str, env: Mapping[str, str], name_lookup: Optional[PhoneLookup] = None,
+                  default_buyer_id: str = DEFAULT_APPROVAL_BUYER) -> str:
+    """The name the approval call greets this buyer by. APPROVAL_BUYER_NAME (else "Vidyut") is for the default buyer ONLY. Any other buyer
+    is greeted by their own display_name, or "there" when it is missing, empty or not a plain name the call script accepts."""
+    if buyer_id and buyer_id == default_buyer_id:
+        return env.get(NAME_ENV) or DEFAULT_BUYER_NAME
+    if not buyer_id or name_lookup is None:
+        return GENERIC_GREETING
+    try:
+        name = (name_lookup(buyer_id) or "").strip()
+    except Exception:
+        return GENERIC_GREETING
+    return name if _NAME.fullmatch(name) else GENERIC_GREETING
+
+
+def approval_phone(buyer_id: str, env: Mapping[str, str], default_buyer_id: str = DEFAULT_APPROVAL_BUYER,
+                   lookup: Optional[PhoneLookup] = None) -> Optional[str]:
     """The number the approval call rings for this buyer, or None when there is none. The default buyer gets the env-configured
-    APPROVAL_CALL_TO (unchanged). Any other buyer gets None for now and is never given the default buyer's number.
-    TODO(#374): read the buyer's own phone from the market's buyer_profile (reducer in the unmerged PRs #378-#380) for every other buyer."""
+    APPROVAL_CALL_TO (unchanged, the market is not asked). Any other buyer gets their OWN phone from `lookup` (the market's agent-only
+    contact view), only when it is a valid E.164 number; with no lookup, no row, no phone or a bad number it is None. Never the default
+    buyer's number and never another buyer's."""
     if buyer_id and buyer_id == default_buyer_id:
         return env.get(TO_ENV) or None
-    return None
+    if not buyer_id or lookup is None:
+        return None
+    try:
+        phone = lookup(buyer_id)
+    except Exception:
+        return None
+    return phone if valid_e164(phone) else None
 
 
-def client_for_buyer(buyer_id: str, env: Mapping[str, str], **kw) -> "CartesiaClient":
+def client_for_buyer(buyer_id: str, env: Mapping[str, str], lookup: Optional[PhoneLookup] = None, **kw) -> "CartesiaClient":
     """The Cartesia client whose only number is this buyer's approval phone. NoPhone for a buyer with none (never the default number);
     the default buyer's missing or bad setup is the same CartesiaError as before."""
-    phone = approval_phone(buyer_id, env)
+    phone = approval_phone(buyer_id, env, lookup=lookup)
     if phone is None and buyer_id != DEFAULT_APPROVAL_BUYER:
         raise NoPhone(f"no approval phone number for buyer {buyer_id}")
     return CartesiaClient.from_env({**env, TO_ENV: phone} if phone else env, **kw)

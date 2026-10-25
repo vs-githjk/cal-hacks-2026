@@ -1013,13 +1013,50 @@ def main(argv: Optional[list] = None) -> int:
         return 1
 
 
+def _referee_sql(args) -> Callable[[str], Any]:
+    """sql(query) as the referee identity, opened lazily on the first query (nothing is opened for the default buyer). No referee token
+    on disk, or any setup problem, raises RuntimeError (the lookups turn that into None); it never mints an identity."""
+    state: dict[str, Any] = {}
+
+    def sql(query: str) -> Any:
+        if "market" not in state:
+            try:
+                tokens = find_tokens_dir(getattr(args, "tokens_dir", None), live_target(args))
+            except SystemExit as e:   # a setup problem here is a missing phone (fail closed), not a crash of the approver
+                raise RuntimeError("market tokens unavailable") from e
+            token = tokens / REFEREE_TOKEN
+            if not token.exists():
+                raise RuntimeError("no referee token")
+            sys.path.insert(0, str(ROOT / "market" / "scripts"))
+            from stdb import Market   # reads SPACETIMEDB_HTTP and SPACETIMEDB_DB, exported by live_target
+            state["market"] = Market(token_file=str(token))
+        return state["market"].sql(query)
+
+    return sql
+
+
+def referee_phone_lookup(args) -> Callable[[str], Optional[str]]:
+    """H3: a lookup of one buyer's own approval phone in the market's agent-only agent_buyer_contact view, read as the referee.
+    Any failure is None (the caller then fails closed with NoPhone); the number is never printed."""
+    from pay import voice_cartesia as vc
+    return vc.phone_lookup_from_sql(_referee_sql(args))
+
+
+def referee_name_lookup(args) -> Callable[[str], Optional[str]]:
+    """H3: a lookup of one buyer's own display_name from the same view, to greet them by (never the default buyer's name)."""
+    from pay import voice_cartesia as vc
+    return vc.name_lookup_from_sql(_referee_sql(args))
+
+
 def live_approver_for(args, run: dict, gate: DealGate, out) -> tuple[Callable[[Step], dict], str]:
     """The --live-call gate for this run, plus one console line saying where the call would go. A missing or bad Cartesia
     setup is not a crash: the gate denies at the approval beat (nothing is dialled, nothing is paid). The deal, the why-answer
     and the code's screen all come from `gate` when beat 4 starts."""
     from pay import voice_cartesia as vc
     env = vc.load_env(args.env_file or vc.DEFAULT_ENV_FILE)
-    buyer_name = env.get(vc.NAME_ENV) or vc.DEFAULT_BUYER_NAME
+    buyer_id = getattr(args, "buyer_id", DB_BUYER_ID)
+    # APPROVAL_BUYER_NAME is the default buyer's name only; any other buyer is greeted by their own display_name, else "there" (H3)
+    buyer_name = vc.greeting_name(buyer_id, env, referee_name_lookup(args))
 
     def show(code: str, why_not: Optional[str]) -> None:
         if why_not is None:
@@ -1028,7 +1065,8 @@ def live_approver_for(args, run: dict, gate: DealGate, out) -> tuple[Callable[[S
             out.note(f"SCREEN CODE: {code}   (/buyer could not show it: {why_not}. Say it, then say approve)")
 
     try:
-        client = vc.client_for_buyer(getattr(args, "buyer_id", DB_BUYER_ID), env)   # #374: this buyer's own phone, never another buyer's
+        # #374 + H3: this buyer's own phone, never another buyer's (a web buyer's comes from the market's agent-only contact view)
+        client = vc.client_for_buyer(buyer_id, env, lookup=referee_phone_lookup(args))
         where = f"live call: ONE call to {vc.mask_number(client.approval_call_to)} at the approval beat (Cartesia configured)"
         unconfigured = None
     except vc.NoPhone as e:

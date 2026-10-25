@@ -1058,7 +1058,9 @@ def _approval_call(buyer_id: str = ""):
         profile = None
     profile = profile if isinstance(profile, dict) else {}
     env = load_env()
-    name = profile.get("display_name") or env.get("APPROVAL_BUYER_NAME") or "there"
+    # one rule with the CLI path: the buyer's own plain display_name, else "there"; APPROVAL_BUYER_NAME is only the default buyer's
+    from pay.voice_cartesia import greeting_name
+    name = greeting_name(buyer_id, env, lambda _b: profile.get("display_name"))
     if APPROVAL_CALL_CLIENT is not None:
         return APPROVAL_CALL_CLIENT, "", name
     phone = profile.get("phone")
