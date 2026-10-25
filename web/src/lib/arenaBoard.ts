@@ -43,7 +43,8 @@ const REASONS: Record<string, string> = {
   advocate_veto: "Vetoed by Advocate",
   claim_false: "Claim check failed",
 };
-const reasonOf = (code: string) => REASONS[code] ?? "Refused by referee";
+const reasonOf = (code: string, rank: number | null | undefined) =>
+  code === "outranked" ? (rank ? `Ranked #${rank}` : "Outranked") : (REASONS[code] ?? "Refused by referee");
 const OFFICIALS = new Set<string>(["buyer", "advocate", "shield", "referee"]);
 
 export function boardAt(scene: ArenaScene, beat: number): BoardState {
@@ -86,7 +87,7 @@ export function boardAt(scene: ArenaScene, beat: number): BoardState {
   for (const k of knocks) {
     const o = byBid.get(k.id);
     if (!o) continue;
-    out.push({ ...card(o, "out", true), reason: reasonOf(k.reasonCode), reasonText: k.reasonText });
+    out.push({ ...card(o, "out", true), reason: reasonOf(k.reasonCode, o.rank), reasonText: k.reasonText });
   }
   const outIds = new Set(out.map((c) => c.bidId));
   const focus = new Set<ActorKey>(final ? [] : current?.focus ?? []);

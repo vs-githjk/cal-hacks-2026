@@ -4,8 +4,9 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { useReducedMotion } from "motion/react";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
+import { Arena2D } from "@/components/Arena2D";
 import { Floor3D, hasWebGL } from "@/components/Floor3D";
-import { Card, Code, Label, OriginChip, SourceLink } from "@/components/ui";
+import { Card, Code, OriginChip, SourceLink } from "@/components/ui";
 import { AGENTVERSE_URL, shortAddress, type AgentInfo } from "@/lib/agents";
 import { FEED_ENV, POLL_MS, feedBase, fetchAgents, type AgentStatus } from "@/lib/agentFeed";
 import { agentFor, bubbleText, bubblesFrom, type AgentEventLike } from "@/lib/arenaAgents";
@@ -106,6 +107,13 @@ function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | n
   const picked = pickedState && pickedState.roundId === scene.roundId ? pickedState.key : null;
   const setPicked = useCallback((key: string) => setPickedState({ roundId: scene.roundId, key }), [scene.roundId]);
   const webgl = useWebGL();
+  const [sceneView, setSceneView] = useState<"board" | "3d">(() => {
+    try { return localStorage.getItem("floor.view") === "3d" ? "3d" : "board"; } catch { return "board"; }
+  });
+  const pickView = (v: "board" | "3d") => {
+    setSceneView(v);
+    try { localStorage.setItem("floor.view", v); } catch { /* storage unavailable */ }
+  };
   const [unavailable, setUnavailable] = useState(false);
   const flat = webgl === false || unavailable;
   const [everActive, setEverActive] = useState(false);
@@ -141,59 +149,58 @@ function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | n
       : scene.phase === "open" || scene.phase === "closing" || !reveal.opened
         ? `${scene.sealedCount} sealed bids`
         : `${scene.offers.length} bids${knockedCount > 0 ? `, ${knockedCount} out` : ""}`;
-  const controls = <Controls pb={view} scene={scene} act={act} />;
+
+  const board = sceneView === "board" || flat;
+  const bids = (overlay: boolean) => (
+    <details className={`group pointer-events-auto z-20 rounded-2xl bg-white/95 text-[#2B2A33] shadow-[0_8px_24px_rgba(60,40,30,0.16)] ring-1 ring-black/5 backdrop-blur-md ${overlay ? "w-[min(340px,calc(100%-2rem))] sm:absolute sm:left-4 sm:top-4 max-sm:m-3" : "w-full"}`}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[14px] font-medium [&::-webkit-details-marker]:hidden">
+        <span>{summary}</span>
+        <span className="flex items-center gap-2">
+          {sample !== null && <span className="rounded border border-dashed border-[#2B2A33]/40 px-1.5 font-mono text-[10.5px] text-[#2B2A33]/70">SIM</span>}
+          <span aria-hidden="true" className="transition-transform group-open:rotate-180">▾</span>
+        </span>
+      </summary>
+      <div className="max-h-[50vh] overflow-y-auto border-t border-black/5 px-2 pb-2">
+        <OffersList scene={scene} reveal={reveal} picked={picked} onPick={setPicked} />
+      </div>
+    </details>
+  );
+  // Top right: the countdown while open, and a SIM chip whenever the scene is a sample (audit #253 item 4: samples are always labelled).
+  const corner =
+    countdown || sample !== null ? (
+      <div className="pointer-events-none absolute right-4 top-4 z-20 flex items-center gap-2">
+        {sample !== null && <span title="Sample run, not this market" className="rounded-full bg-white/95 px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.06em] text-[#2B2A33]/75 shadow-[0_2px_8px_rgba(60,40,30,0.15)]">SIM</span>}
+        {countdown}
+      </div>
+    ) : null;
+  const controls = <Controls pb={view} scene={scene} act={act} sceneView={sceneView} onView={pickView} threeAvailable={!flat} />;
 
   return (
     <div className="grid gap-4">
-      {flat ? (
-        <div className="grid min-w-0 content-start gap-3.5">
+      <div className="overflow-hidden rounded-[24px] shadow-[0_18px_48px_rgba(110,70,30,0.16)] ring-1 ring-[#E2D3BE]">
+        <div className="relative flex min-w-0 flex-col sm:block">
+          {board ? (
+            <Arena2D scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} chrome={{ sim: sample !== null, countdown, bids: bids(false) }} />
+          ) : webgl ? (
+            <Floor3D scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} onUnavailable={() => setUnavailable(true)} />
+          ) : (
+            <div className="grid h-[440px] place-items-center bg-[#F6E2CC] text-[#2B2A33]/60 lg:h-[600px]">Loading the floor...</div>
+          )}
           {narration}
-          {countdown}
-          {controls}
-          <ActorList scene={scene} reveal={reveal} picked={picked} onPick={setPicked} />
+          {!board && corner}
+          {!board && bids(true)}
+          {disconnected && (
+            <div className="absolute inset-0 z-30 grid place-items-center bg-canvas/70">
+              {everActive ? (
+                <span className="rounded-lg bg-coral-soft px-3 py-2 font-semibold text-coral">Market disconnected. The floor is still.</span>
+              ) : (
+                <span className="rounded-lg bg-soft px-3 py-2 font-semibold text-muted">Connecting...</span>
+              )}
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="overflow-hidden rounded-[24px] shadow-[0_18px_48px_rgba(110,70,30,0.16)] ring-1 ring-[#E2D3BE]">
-          <div className="relative flex min-w-0 flex-col sm:block">
-            {webgl ? (
-              <Floor3D scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} onUnavailable={() => setUnavailable(true)} />
-            ) : (
-              <div className="grid h-[440px] place-items-center bg-[#F6E2CC] text-[#2B2A33]/60 lg:h-[600px]">Loading the floor...</div>
-            )}
-            {narration}
-            {/* Top right: the countdown while open, and a SIM chip whenever the scene is a sample (audit #253 item 4: samples are always labelled). */}
-            {(countdown || sample !== null) && (
-              <div className="pointer-events-none absolute right-4 top-4 z-20 flex items-center gap-2">
-                {sample !== null && <span title="Sample run, not this market" className="rounded-full bg-white/95 px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.06em] text-[#2B2A33]/75 shadow-[0_2px_8px_rgba(60,40,30,0.15)]">SIM</span>}
-                {countdown}
-              </div>
-            )}
-            {/* a small collapsible window: top left over the scene on wider screens, below the scene on phones */}
-            <details className="group pointer-events-auto z-20 w-[min(340px,calc(100%-2rem))] rounded-2xl bg-white/95 text-[#2B2A33] shadow-[0_8px_24px_rgba(60,40,30,0.16)] ring-1 ring-black/5 backdrop-blur-md sm:absolute sm:left-4 sm:top-4 max-sm:m-3">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[14px] font-medium [&::-webkit-details-marker]:hidden">
-                <span>{summary}</span>
-                <span className="flex items-center gap-2">
-                  {sample !== null && <span className="rounded border border-dashed border-[#2B2A33]/40 px-1.5 font-mono text-[10.5px] text-[#2B2A33]/70">SIM</span>}
-                  <span aria-hidden="true" className="transition-transform group-open:rotate-180">▾</span>
-                </span>
-              </summary>
-              <div className="max-h-[50vh] overflow-y-auto border-t border-black/5 px-2 pb-2">
-                <OffersList scene={scene} reveal={reveal} picked={picked} onPick={setPicked} />
-              </div>
-            </details>
-            {disconnected && (
-              <div className="absolute inset-0 z-30 grid place-items-center bg-canvas/70">
-                {everActive ? (
-                  <span className="rounded-lg bg-coral-soft px-3 py-2 font-semibold text-coral">Market disconnected. The floor is still.</span>
-                ) : (
-                  <span className="rounded-lg bg-soft px-3 py-2 font-semibold text-muted">Connecting...</span>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="border-t border-[#E8DCCB] bg-[#FFFDF8] px-4 py-3 sm:px-6">{controls}</div>
-        </div>
-      )}
+        <div className="border-t border-[#E8DCCB] bg-[#FFFDF8] px-4 py-3 sm:px-6">{controls}</div>
+      </div>
       <Card className="content-start">
         <Details scene={scene} reveal={reveal} events={rows.events} agentRows={agentRows} sample={sample} picked={picked} />
       </Card>
@@ -243,7 +250,7 @@ function seekFor(scene: ArenaScene, i: number): number {
 }
 
 /** The bottom bar: the four-step story line (click a reached step to jump to it) and Pause or Play or Replay, and Skip. */
-function Controls({ pb, scene, act }: { pb: Playback; scene: ArenaScene; act: (a: PlaybackAction) => void }) {
+function Controls({ pb, scene, act, sceneView, onView, threeAvailable }: { pb: Playback; scene: ArenaScene; act: (a: PlaybackAction) => void; sceneView: "board" | "3d"; onView: (v: "board" | "3d") => void; threeAvailable: boolean }) {
   const total = scene.beats.length;
   const done = pb.beat >= total;
   const at = stepOf(scene, pb.beat);
@@ -276,8 +283,24 @@ function Controls({ pb, scene, act }: { pb: Playback; scene: ArenaScene; act: (a
           );
         })}
       </ol>
-      {total > 0 && (
-        <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
+        <div role="group" aria-label="Scene" className="flex overflow-hidden rounded-xl border border-[#2B2A33]/15 bg-white">
+          {(["board", "3d"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={sceneView === v}
+              disabled={v === "3d" && !threeAvailable}
+              title={v === "3d" && !threeAvailable ? "3D needs WebGL, which this browser does not have" : undefined}
+              onClick={() => onView(v)}
+              className={`min-h-11 rounded-lg px-3 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-50 ${sceneView === v ? "bg-[#2F3E66] text-white" : "text-[#2B2A33] hover:bg-[#F6F1EA]"}`}
+            >
+              {v === "board" ? "Board" : "3D"}
+            </button>
+          ))}
+        </div>
+        {total > 0 && (
+          <>
           {pb.playing ? (
             <button type="button" className={PRIMARY} onClick={() => act({ type: "pause" })}><Icon d="M4 3h2.5v10H4zM9.5 3H12v10H9.5z" />Pause</button>
           ) : done ? (
@@ -286,8 +309,9 @@ function Controls({ pb, scene, act }: { pb: Playback; scene: ArenaScene; act: (a
             <button type="button" className={PRIMARY} onClick={() => act({ type: "resume" })}><Icon d="M4.5 3 12.5 8l-8 5z" />Play</button>
           )}
           <button type="button" className={BUTTON} disabled={done} onClick={() => act({ type: "skip" })}><Icon d="M3 3l7 5-7 5zM11 3h2v10h-2z" />Skip</button>
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -466,43 +490,5 @@ function EventRows({ rows }: { rows: { id: string; kind: string; label: string; 
         </li>
       ))}
     </ul>
-  );
-}
-
-/** The flat view when WebGL is missing or fails: the four fixed characters and every offer, each with what it did. */
-function ActorList({ scene, reveal, picked, onPick }: { scene: ArenaScene; reveal: Reveal; picked: string | null; onPick: (key: string) => void }) {
-  const sealed = reveal.opened ? 0 : Math.min(scene.sealedCount, 12); // until the referee opens them, an offer is only an envelope
-  const row = "grid min-h-11 w-full grid-cols-[1fr_auto] items-baseline gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-soft";
-  return (
-    <Card>
-      <Label>Characters (flat view, no WebGL)</Label>
-      <ul className="grid gap-1 sm:grid-cols-2">
-        {FIXED_ACTORS.map((a) => (
-          <li key={a.key}>
-            <button type="button" onClick={() => onPick(a.key)} aria-pressed={picked === a.key} className={`${row} ${picked === a.key ? "ring-1 ring-ink" : ""}`}>
-              <span className="min-w-0"><b className="font-semibold">{a.name}</b> <OriginChip origin={a.origin} /></span>
-              <span className="text-[12px] text-muted">{ROLE[a.key]}</span>
-            </button>
-          </li>
-        ))}
-        {reveal.opened && scene.offers.map((o) => (
-          <li key={o.key}>
-            <button type="button" onClick={() => onPick(o.key)} aria-pressed={picked === o.key} className={`${row} ${reveal.shown(o) && o.outcome === "winner" ? "bg-mint-soft" : ""} ${picked === o.key ? "ring-1 ring-ink" : ""}`}>
-              <span className="min-w-0">
-                <b className={`font-semibold ${reveal.shown(o) && o.outcome === "knocked" ? "line-through" : ""}`}>{o.name}</b> <OriginChip origin={o.origin} />
-                {agentFor(o.key, scene) && <span className="ml-1.5 text-[12px] text-muted">Fetch.ai</span>}
-              </span>
-              <span className="text-right text-[13px] tabular-nums">{formatMoney(o.landed)} {reveal.shown(o) && <span className="text-muted">{outcomeWord(o)}</span>}</span>
-            </button>
-          </li>
-        ))}
-        {Array.from({ length: sealed }, (_, i) => (
-          <li key={`sealed-${i}`} className={`${row} cursor-default`}>
-            <span className="min-w-0 font-semibold">Offer {i + 1}</span>
-            <span className="text-[13px] text-muted">Sealed</span>
-          </li>
-        ))}
-      </ul>
-    </Card>
   );
 }

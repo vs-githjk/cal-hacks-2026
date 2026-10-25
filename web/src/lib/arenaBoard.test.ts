@@ -39,7 +39,9 @@ test("first knocking beat moves the offer to the Out rail with its reason", () =
   const outCard = s.out.find((c) => c.bidId === knock.id);
   assert.ok(outCard);
   assert.ok(!s.track.some((c) => c.bidId === knock.id));
-  assert.equal(outCard.reason, words[knock.reasonCode] ?? "Refused by referee");
+  const o = scene.offers.find((x) => x.bidId === knock.id)!;
+  const expected = knock.reasonCode === "outranked" ? (o.rank ? `Ranked #${o.rank}` : "Outranked") : (words[knock.reasonCode] ?? "Refused by referee");
+  assert.equal(outCard.reason, expected);
   assert.equal(outCard.reasonText, knock.reasonText);
   assert.equal(s.stillIn?.k, s.track.length);
   assert.equal(s.stillIn?.n, scene.offers.length);
@@ -69,4 +71,14 @@ test("open round: empty track, sealed envelopes, a sentence", () => {
 
 test("beat beyond the end clamps to the final frame", () => {
   assert.deepEqual(boardAt(scene, scene.beats.length + 7), boardAt(scene, scene.beats.length));
+});
+
+test("an outranked knock reads Ranked #n, never Refused by referee", () => {
+  const out = boardAt(scene, scene.beats.length).out;
+  const outranked = scene.offers.filter((o) => o.knock?.reasonCode === "outranked");
+  assert.ok(outranked.length > 0);
+  for (const o of outranked) {
+    const c = out.find((x) => x.bidId === o.bidId)!;
+    assert.equal(c.reason, o.rank ? `Ranked #${o.rank}` : "Outranked");
+  }
 });
