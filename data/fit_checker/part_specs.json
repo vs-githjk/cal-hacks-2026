@@ -1,0 +1,8 @@
+{
+ "note": "Maker specs for the exact models we hold real listings for (#342). Each row: brand, model_number, match (strict title regex), optional exclude, the specs the fit rules read, source (the maker's own page) and checked (date). A model with no row is unknown and never bids.",
+ "cpu": [],
+ "motherboard": [],
+ "memory": [],
+ "storage": [],
+ "cooler": []
+}
