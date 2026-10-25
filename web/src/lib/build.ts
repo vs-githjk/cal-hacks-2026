@@ -1,6 +1,8 @@
 // The build panel's view of agents/buyer/planner.py: plan() then resolve() over one round per part.
 // SAMPLE_BUILD is that planner's own SIM run (python -m agents.buyer.build_plan_demo, 2026-10-24), not live data.
 
+import type { PartProof } from "./proof.ts";
+
 export type StepKind = "plan" | "knockout" | "clash" | "swap" | "reallocate" | "pick" | "locked" | "blocked";
 export interface BuildStep { kind: StepKind; line: string; part?: string; with?: string[]; rule_id?: string }
 /** origin: the listing's label (MIRROR or SIM) when the build came from the market feed. */
@@ -25,6 +27,8 @@ export interface BuildResult {
   /** Fit checks as the feed recorded them (panel part keys). */
   checks?: { a: string; b: string; rule: string; state: "ok" | "clash" | "unknown"; detail: string; source: string }[];
   approval?: { state: string; total: number; sellers: number } | null;
+  /** Sponsor proof per part that has a champion (panel part keys): the Bright Data re-check and Tiger Data history, as the feed served them. */
+  proof?: Record<string, PartProof>;
   /** Comparison-only listings (MIRROR). Never a bidder, never paid. */
   comparisons?: { part: string; seller: string; priceCents: number; origin: "MIRROR"; note: string }[];
 }

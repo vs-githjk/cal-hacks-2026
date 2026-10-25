@@ -166,6 +166,41 @@ def _out_reason(results: list[dict]) -> str:
     return ""
 
 
+LIVE_CHECK_SOURCE = "Bright Data"
+HISTORY_WINDOWS = (7, 30)   # the week and the month, as the Market Pulse reports them (data.tiger.trends.WINDOWS)
+HISTORY_TIMEOUT_S = 10.0    # one bound for a build's whole parallel Tiger read; Tiger is never on the money path
+
+
+def _cents_int(v: Any) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool) and v > 0
+
+
+def history_entry(reads: dict) -> dict:
+    """The deal card's Tiger Data line for one part, from price_trend-shaped reads {days: result}. Pure. Only a window that really holds
+    rows carries numbers (dollars: low, median, n, daysOfData: how many days Tiger has held this SKU, so a young history says so).
+    state: ok | no_data (Tiger answered, nothing for this SKU) | not_configured | error. origin is the weakest origin of the rows read;
+    a stored LIVE is a dated row, so it reads MIRROR, and a read with no rows is SIM and says no number."""
+    windows, origins, statuses = [], [], []
+    for days in sorted(k for k in reads if isinstance(k, int)):
+        r = reads[days]
+        status = r.get("status") if isinstance(r, dict) else None
+        statuses.append(status if status in ("ok", "not_configured") else "error")
+        if status != "ok":
+            continue
+        n, lo, med, held = r.get("n"), r.get("min_cents"), r.get("median_cents"), r.get("days_of_data")
+        if not (_cents_int(n) and _cents_int(lo) and _cents_int(med)):
+            if n != 0:
+                statuses[-1] = "error"   # an "ok" read we cannot read is a failed read, not an empty one
+            continue
+        windows.append({"days": days, "low": round(lo / 100, 2), "median": round(med / 100, 2), "n": n,
+                        "daysOfData": held if _cents_int(held) else 0})
+        origins += [MIRROR if o == LIVE else o for o in (r.get("origins") or [])] or [SIM]
+    if windows:
+        return {"state": "ok", "origin": _weakest(origins), "windows": windows}
+    state = "not_configured" if statuses and all(x == "not_configured" for x in statuses) else "error" if "error" in statuses or not statuses else "no_data"
+    return {"state": state, "origin": SIM, "windows": []}
+
+
 def build_view(market_rows: dict, plan_events: list, checks: list) -> dict:
     """The BuildView the board reads (docs/changes/1650-D-build-board-shape.md), from rows only. Pure: nothing in the inputs changes.
 
@@ -174,7 +209,8 @@ def build_view(market_rows: dict, plan_events: list, checks: list) -> dict:
       needs [{id, goalId, part, spendLimit, origin}] (a part's later need is its re-plan); rounds [{id, needId, state open|closed,
       openedAt, closedAt, origin}]; roundResults [{roundId, bidId, sellerId, persona, rank, landed, reasons, origin, sourceUrl}];
       mandates [{hash, dealId, amount, payee, part}]; payments [{mandateHash, paymentRef, amount, mode, at, text, part}];
-      approval {state, method, reason, events [{at, kind, text, origin}]}; liveChecks {part: {state, price, fetchedAt, origin, quoted, at, text}}.
+      approval {state, method, reason, events [{at, kind, text, origin}]}; liveChecks {part: {state, price, fetchedAt, origin, quoted, at, text}};
+      priceHistory {part: history_entry(...)} (Tiger Data's 7 and 30 day read, shown on a part that has a champion).
     plan_events: [{at, kind, text, parts, origin?}] from the planner (plan, clash, replan). checks: the fit lines, passed through."""
     goal = market_rows.get("goal") or {}
     rounds = {r["id"]: r for r in market_rows.get("rounds") or []}
@@ -185,6 +221,7 @@ def build_view(market_rows: dict, plan_events: list, checks: list) -> dict:
     for n in market_rows.get("needs") or []:
         needs.setdefault(n["part"], []).append(n)
     live = market_rows.get("liveChecks") or {}
+    hist = market_rows.get("priceHistory") or {}
     replans = [e for e in plan_events if e.get("kind") == "replan"]
     parts, champions = [], {}
     events = [{"at": e.get("at") or "", "kind": e["kind"], "text": e["text"], "parts": list(e.get("parts") or []), "origin": _origin(e.get("origin"))}
@@ -227,8 +264,12 @@ def build_view(market_rows: dict, plan_events: list, checks: list) -> dict:
                             lv = live[part]
                             c["liveCheck"] = {k: lv.get(k) for k in ("state", "price", "fetchedAt", "origin", "quoted")}
                             c["liveCheck"]["origin"] = _origin(c["liveCheck"]["origin"])
+                            c["liveCheck"]["source"] = LIVE_CHECK_SOURCE
                         entry["champion"], entry["origin"] = c, c["origin"]
                         champions[part] = c
+                        if part in hist:
+                            h = hist[part]
+                            entry["history"] = {**h, "origin": MIRROR if h.get("origin") == LIVE else _origin(h.get("origin"))}
                         if entry["status"] == "replanned":
                             said = [e for e in replans if part in (e.get("parts") or [])]
                             entry["reason"] = said[-1]["text"] if said else "The earlier pick was swapped"
@@ -752,7 +793,8 @@ class BuildRun:
                  stagger: Optional[float] = None, knockout: bool = False, max_stages: int = MAX_STAGES, replan: bool = True,
                  replan_catalog: Optional[Callable] = None, publisher: Optional[Callable[[str, str], None]] = None,
                  publish_interval: float = 1.0, relay_signals: Optional[Callable[[], Any]] = None, no_call_reason: str = "not_configured",
-                 agent_addresses: Optional[dict] = None, reuse_goal: bool = False):
+                 agent_addresses: Optional[dict] = None, reuse_goal: bool = False,
+                 history: Optional[Callable[[str, int], dict]] = None, history_timeout: float = HISTORY_TIMEOUT_S):
         self.plan, self.clients, self.allowance = plan, clients, allowance
         self.reuse_goal = reuse_goal   # the buyer's own goal is already in the market (plan_from_goal): the run never posts a second one
         self.agent_addresses = agent_addresses or {}   # the Fetch tile's agents: with them, a value this run really fetched is posted as a LIVE line
@@ -787,6 +829,8 @@ class BuildRun:
         self.mandates: list[dict] = []
         self.payments: list[dict] = []
         self.live: dict[str, dict] = {}
+        self.history, self.history_timeout = history, history_timeout   # (sku, days) -> a data.tiger.trends.price_trend result, or None
+        self.hist: dict[str, dict] = {}
         self.approval: dict[str, Any] = {"state": "waiting", "events": []}
         self._full: list[dict] = []   # the full pay.mandate dicts behind self.mandates
         self._verified: set[str] = set()   # mandate hashes whose approval was read back from the market
@@ -803,7 +847,8 @@ class BuildRun:
         items += [{"part": s.part, "label": s.label, "skippedOwnedPartId": "", "budget": s.budget} for s in p.parts]
         return {"goal": {"id": p.goal_id, "buyerId": p.buyer_id, "cap": p.cap, "origin": SIM, "type": "build_by_date"}, "goalItems": items,
                 "needs": self.needs, "rounds": self.rounds, "roundResults": self.results, "mandates": self.mandates, "approvals": [],
-                "payments": self.payments, "approval": self.approval, "liveChecks": self.live}
+                "payments": self.payments, "approval": self.approval, "liveChecks": self.live,
+                "priceHistory": self.hist}
 
     def view(self) -> dict:
         return build_view(self.snapshot(), self.plan_events, self.checks)
@@ -1143,6 +1188,28 @@ class BuildRun:
         self.publish()
         return {"status": "denied", "reason": reason, "view": self.view()}
 
+    # ---- Tiger Data's 7 and 30 day price history, one entry per bought part, in parallel and bounded
+
+    def read_history(self, champs: dict) -> None:
+        """self.hist[part] for each part with a champion: the part's SKU read for each of HISTORY_WINDOWS. No reader is "not_configured";
+        a read that fails or runs over the shared timeout is "error". Never an exception and never a number that Tiger did not give."""
+        if self.history is None:
+            self.hist.update({part: history_entry({d: {"status": "not_configured"} for d in HISTORY_WINDOWS}) for part in champs})
+            return
+        skus = {s.part: s.sku for s in self.plan.parts}
+        pool = cf.ThreadPoolExecutor(max_workers=max(1, len(champs) * len(HISTORY_WINDOWS)))
+        futs = {(part, d): pool.submit(self.history, skus[part], d) for part in champs for d in HISTORY_WINDOWS}
+        end = time.monotonic() + self.history_timeout
+        for part in champs:
+            reads = {}
+            for d in HISTORY_WINDOWS:
+                try:
+                    reads[d] = futs[(part, d)].result(timeout=max(0.0, end - time.monotonic()))
+                except Exception:  # noqa: BLE001  (a timeout or a failing read is an error line, never a crash)
+                    reads[d] = {"status": "error"}
+            self.hist[part] = history_entry(reads)
+        pool.shutdown(wait=False, cancel_futures=True)
+
     # ---- the live re-check (Bright Data), one per MIRROR champion, in parallel and bounded
 
     def recheck(self, champs: dict) -> dict:
@@ -1249,6 +1316,7 @@ class BuildRun:
         clash = next((c for c in self.checks if c["state"] == "clash"), None)
         if clash is not None:
             return self._deny("fit_clash", f"No call: the picked parts do not fit ({clash['detail']}). Nothing was paid.")
+        self.read_history(champs)
         checks = self.recheck(champs)
         stops = self._stop_reasons(checks, champs)
         if stops:
@@ -1759,9 +1827,9 @@ def main(argv: Optional[list] = None) -> int:
     from demo.run_demo import DEFAULT_ENV_FILE
     approver_env = args.env_file or DEFAULT_ENV_FILE
     cartesia, price_check, no_call_reason = None, None, "not_configured"
+    from demo import sponsors_live as S
+    S.load_sponsor_env(approver_env)   # names only, never printed; the Tiger read below stays "not_configured" without TIGER_DATA_SERVICE_URL
     if args.live_call or args.recheck:
-        from demo import sponsors_live as S
-        S.load_sponsor_env(approver_env)
         price_check = S.price_recheck
     buyer_name = "Vidyut"
     secret = None
@@ -1804,7 +1872,8 @@ def main(argv: Optional[list] = None) -> int:
                        secret=secret, buyer_name=buyer_name, use_stripe=args.stripe,
                        env={**os.environ, **stripe_env(DEFAULT_ENV_FILE)} if args.stripe else {}, out_dir=out_dir, say=say,
                        note=out.note, delay=args.step_delay, bid_window=args.bid_window, stagger=stagger, knockout=knockout,
-                       publisher=publisher, no_call_reason=no_call_reason, agent_addresses=bridge.demo_agent_addresses(), reuse_goal=reuse)
+                       publisher=publisher, no_call_reason=no_call_reason, agent_addresses=bridge.demo_agent_addresses(), reuse_goal=reuse,
+                       history=S.price_history)
         clock_of["run"] = run
         res = run.run()
     except RuntimeError as e:
