@@ -9,6 +9,7 @@ import { STDB_DB, STDB_URI } from "@/lib/stdb";
 import { serviceStatuses, type ServiceStatus } from "@/lib/runMode";
 import { BRAND } from "@/lib/brand";
 import { BrandMark, Wordmark } from "./BrandMark";
+import { AccountMenu } from "./AccountMenu";
 
 const NAV: { href: string; label: string; match?: string }[] = [
   { href: "/buyer", label: "Buyer", match: "/buyer" },
@@ -43,11 +44,15 @@ export function AppHeader() {
         </Link>
         <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 sm:flex">{links}</div>
         <div className="flex items-center gap-2.5">
-          {path !== "/start" && !path.startsWith("/buyer") && (
-            <Link href="/start" className="btn fm-btn fm-grad inline-flex min-h-10 items-center rounded-xl px-4 text-[14px] font-medium text-white">
-              Start a goal
-            </Link>
-          )}
+          <AccountMenu
+            fallback={
+              path !== "/start" && !path.startsWith("/buyer") && (
+                <Link href="/start" className="btn fm-btn fm-grad inline-flex min-h-10 items-center rounded-xl px-4 text-[14px] font-medium text-white">
+                  Start a goal
+                </Link>
+              )
+            }
+          />
         </div>
       </nav>
       <div className="mx-auto mb-1 flex w-max max-w-full gap-1 overflow-x-auto [scrollbar-width:none] sm:hidden">{links}</div>
