@@ -480,6 +480,8 @@ async def handle_text(ctx: Context, sender: str, text: str):
             if len(STRANGER_TOLD) >= 256:
                 STRANGER_TOLD.clear()
             STRANGER_TOLD[sender] = now
+            # The operator pins the owner from this line (MARKET_BUYER_OWNER_SENDER); an agent address is public, not a secret.
+            ctx.logger.info(f"OWNER_PIN_CANDIDATE sender={sender}")
             await tell(ctx, sender, STRANGER_REPLY)
         return
     if sender == ROUND.get("owner") and (hunt.command(text) or ("",))[0] == "approve":
