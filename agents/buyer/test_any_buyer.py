@@ -689,6 +689,7 @@ def test_web_buyer_off_the_allowlist_gets_no_call_and_frees_the_agent(runtime, m
     assert buyer.ROUND["phase"] == "done" and buyer.ROUND.get("transaction") is None and not buyer.ROUND.get("pending_hold")
     assert _stored_phases(db) == ["expired"]
     assert not re.search(r"\d{7,}", caplog.text.replace(BID, "")) and "4155550111" not in caplog.text
+    assert [c[1:] for c in _state_calls(buyer)] == [("FAILED", buyer.BETA_LIMIT_TEXT)]  # #455: the web buyer is told
     assert _next_web_goal_adopted(buyer, db) is True
 
 
@@ -742,6 +743,7 @@ def test_a_rate_limited_dial_is_final_and_not_retried_on_the_web_path(runtime, m
     assert len(limited.attempts) == 1
     assert not buyer.MARKET_REFEREE.record_approval.called
     assert buyer.ROUND["phase"] == "done" and _stored_phases(db) == ["expired"]
+    assert [c[1:] for c in _state_calls(buyer)] == [("FAILED", buyer.BETA_LIMIT_TEXT)]  # #455: the web buyer is told
 
 
 def test_a_rate_limited_dial_tells_the_chat_owner_about_the_beta_limit(runtime, monkeypatch):
@@ -757,6 +759,19 @@ def test_a_rate_limited_dial_tells_the_chat_owner_about_the_beta_limit(runtime, 
     texts = " ".join(getattr(m.content[0], "text", "") for _to, m in ctx.sent if hasattr(m, "content"))
     assert len(limited.attempts) == 1 and "limited during the beta" in texts and "Nothing was paid" in texts
     assert not buyer.MARKET_REFEREE.record_approval.called
+
+def test_a_chat_call_is_never_dialled_when_its_code_cannot_be_issued(runtime, monkeypatch):
+    # #455: record_approval needs the code the market issued; without that row the call could never approve, so never ring
+    buyer, _db = runtime
+    dialled = _Limited()
+    monkeypatch.setattr(buyer, "_approval_call", lambda _b: (dialled, "", "Asha"))
+    _real_service(buyer, monkeypatch)
+    ready_for_requote(buyer)   # the chat owner (market buyer "vidyut", a pinned owner), not a b_ web buyer
+    buyer.MARKET_REFEREE.issue_approval_code.side_effect = RuntimeError("market down")
+    transaction = buyer._create_pending_transaction(1)
+    asyncio.run(buyer._run_owner_approval(Context(), 1, buyer.ROUND["owner"], transaction))
+    assert dialled.attempts == [] and not buyer.MARKET_REFEREE.record_approval.called
+
 
 STRANGER = "agent1qstranger"
 GOAL_TEXT = "a new RTX 4070 Super under $800 by Friday"  # a named card: a bare GPU gets a question (RT-15)

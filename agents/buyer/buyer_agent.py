@@ -1162,10 +1162,8 @@ async def _phone_approval(transaction: dict, send_private, client, service, buye
             owner_approval.remember_code(owner_approval.market_hash(transaction), code)  # memory only, for record_approval
             market_clients()[1].issue_approval_code(owner_approval.market_hash(transaction), code)
         except Exception:
-            if web:
-                raise PermissionError("approval code could not be shown") from None
-            import logging
-            logging.getLogger("buyer_agent").warning(f"approval code not shown on /buyer for buyer {buyer_id}")
+            # #455: record_approval needs the code the market issued; without it no call can approve, so never ring (any buyer)
+            raise PermissionError("approval code could not be issued") from None
         if web:  # no chat: the market's own approval view shows the code on /buyer; never send it elsewhere
             import logging
             logging.getLogger("buyer_agent").info(f"web buyer {buyer_id}: code shown on /buyer")
@@ -1340,6 +1338,8 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             transaction["phase"] = "expired"
             buyer_state.save_transaction(state_db(), transaction)
             ROUND.update(transaction=None, pending_hold=False, phase="done")
+            if web:
+                await _report_web_goal("FAILED", BETA_LIMIT_TEXT)  # #455: the web buyer is told on /buyer, not left ACTIVE
             await tell_owner(ctx, BETA_LIMIT_TEXT)
             return
         if client is None:
