@@ -82,3 +82,19 @@ test("an outranked knock reads Ranked #n, never Refused by referee", () => {
     assert.equal(c.reason, o.rank ? `Ranked #${o.rank}` : "Outranked");
   }
 });
+
+test("gpu final frame: Central is on the Out rail, vetoed, and no MIRROR card wins", () => {
+  const s = boardAt(scene, scene.beats.length);
+  const central = s.out.find((c) => c.sellerId === "seller_6");
+  assert.ok(central);
+  assert.equal(central.reason, "Vetoed by Advocate");
+  assert.equal(central.origin, "MIRROR");
+  assert.ok(![...s.track, ...s.out].some((c) => c.origin === "MIRROR" && c.state === "winner"));
+});
+
+test("ssd final frame: Seller D is out, refused by the referee", () => {
+  const ssd = projectArenaScene(SAMPLES.ssd, { sample: true });
+  const d = boardAt(ssd, ssd.beats.length).out.find((c) => c.sellerId === "seller-d");
+  assert.ok(d);
+  assert.equal(d.reason, "Refused by referee");
+});

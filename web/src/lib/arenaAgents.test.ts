@@ -24,7 +24,7 @@ test("an offer maps by exact sellerId: seller_N is the agent seller N, never by 
   assert.equal(agentFor(by("seller_1").key, scene)!.key, "seller1");
   assert.equal(agentFor(by("seller_2").key, scene)!.name, "Silicon Sally's Surplus");
   assert.equal(agentFor(by("seller_3").key, scene)!.name, "FlashDeal Frankie");
-  assert.equal(agentFor(by("seller_4").key, scene), null); // no Agentverse entry yet
+  assert.equal(agentFor(by("seller_6").key, scene), null); // MIRROR store, no Agentverse entry
   assert.equal(agentFor(by("seller_5").key, scene), null);
   assert.equal(agentFor(offerKey("not-a-bid"), scene), null);
   const ssd = projectArenaScene(SAMPLES.ssd);
@@ -71,12 +71,12 @@ test("the gpu sample uses the real Fetch seller agents with the same outcomes", 
   const names = Object.fromEntries(scene.offers.map((o) => [o.sellerId, [o.name, o.outcome, o.condition, o.landed]]));
   assert.deepEqual(names, {
     seller_1: ["Byte Bros Outlet", "winner", "new", 1299.99],
-    seller_5: ["ReNew Refurb", "ranked", "open-box", 1247.02],
+    seller_5: ["ReNew Refurb", "ranked", "refurbished", 1247.02],
     seller_2: ["Silicon Sally's Surplus", "knocked", "open-box", 1150],
-    seller_4: ["Bay Area PC Shop", "knocked", "new", 1090],
     seller_3: ["FlashDeal Frankie", "knocked", "new", 1199],
+    seller_6: ["Central Computers", "knocked", "new", 1349.99],
   });
-  assert.deepEqual(scene.offers.map((o) => o.knock?.reasonCode), [undefined, "outranked", "shield_block", "below_floor", "advocate_veto"]);
+  assert.deepEqual(scene.offers.map((o) => o.knock?.reasonCode), [undefined, "outranked", "shield_block", "advocate_veto", "advocate_veto"]);
   assert.ok(scene.offers.find((o) => o.sellerId === "seller_3")!.sourceUrl);
   const open = projectArenaScene(SAMPLES["gpu-open"]);
   assert.equal(open.phase, "open");
