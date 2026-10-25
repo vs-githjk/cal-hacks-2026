@@ -7,7 +7,7 @@
    "title": "Listings",
    "type": "array",
    "editor": "json",
-   "description": "One object per listing with any of: title, description, sellerNotes (text), and optional id, url and origin (LIVE, MIRROR or SIM). Up to 1,000 per run. The two examples are SIM listings: one honest, one with an injection attempt in its seller notes.",
+   "description": "One object per listing with any of: title, description, sellerNotes (text), and optional id, url and origin (LIVE, MIRROR or SIM). Rows with no origin are labelled UNVERIFIED. Up to 1,000 per run. The two examples are SIM listings: one honest, one with an injection attempt in its seller notes.",
    "prefill": [
     {
      "id": "sim-psu-1",
