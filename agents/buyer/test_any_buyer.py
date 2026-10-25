@@ -224,7 +224,7 @@ def test_web_winner_goes_mandate_code_call_approval_on_referee_without_owner_cha
     assert referee.create_mandate.call_args.kwargs["buyer_id"] == BID
     referee.issue_approval_code.assert_called_once_with(mandate_hash, "424242")
     assert referee.record_approval.call_args.kwargs == {"mandate_hash": mandate_hash, "method": "voice_code", "approved_by": BID,
-                                                        "voice_approval_id": "va-1"}
+                                                        "voice_approval_id": "va-1", "code": "424242"}  # the code issued for this call
     assert len(used) == 1 and used[0].to == "+14155550111"
     assert not buyer.MARKET_BUYER.mock_calls
     assert not any(isinstance(m, buyer.ChatMessage) for _to, m in ctx.sent)  # no owner chat message at all
