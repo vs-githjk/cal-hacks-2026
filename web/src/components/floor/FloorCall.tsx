@@ -27,7 +27,6 @@ const WHITE: CSSProperties = {
   borderRadius: 18,
 };
 const CARD_MAX = 720;
-const CARD_MIN = 260;
 
 function cornerStyle(c: Corner): CSSProperties {
   return { [c.startsWith("t") ? "top" : "bottom"]: INSET, [c.endsWith("l") ? "left" : "right"]: INSET };
@@ -84,8 +83,8 @@ export function FloorCall({ floor, lines, live, reducedMotion }: { floor: (follo
   const floorTile: MotionStyle = { ...tileBase, ...GLASS };
   const chatTile: MotionStyle = { ...tileBase, ...WHITE };
   const bigFloor: MotionStyle = { position: "relative", width: "100%", zIndex: 0, overflow: "hidden" };
-  // The big chat is a card sized to its content (at least 260 px tall, growing with the messages up to the stage height, then it scrolls); the frame hugs it
-  // with 24 px above and below. On wide frames the floor tile sits beside the card, in its corner; on narrow ones the card steps below (or above) the tile.
+  // The big chat is a card sized to its content (exactly header plus messages, growing as they arrive up to the stage height, then it scrolls); the frame hugs it
+  // with 24 px above and below, never shorter than the floor tile plus 32 px. On wide frames the floor tile sits beside the card, in its corner; on narrow ones the card steps below (or above) the tile.
   const tileW = frameW * (frameW < PHONE ? 0.34 : 0.24);
   const tileH = tileW * 0.625;
   const sideW = Math.min(CARD_MAX, frameW - tileW - INSET * 2);
@@ -95,7 +94,7 @@ export function FloorCall({ floor, lines, live, reducedMotion }: { floor: (follo
   const left = wide ? Math.max(0, corner.endsWith("l") ? Math.max(room / 2, tileW + INSET * 2) : Math.min(room / 2, room - tileW - INSET * 2)) : room / 2;
   const stack = wide ? 0 : Math.max(0, tileH + INSET + 12 - 24);
   const bigChat: MotionStyle = {
-    position: "relative", width: cardW, minHeight: CARD_MIN, maxHeight: bigH, marginLeft: left, zIndex: 0, overflow: "hidden", ...WHITE,
+    position: "relative", width: cardW, maxHeight: bigH, marginLeft: left, zIndex: 0, overflow: "hidden", ...WHITE,
     marginTop: corner.startsWith("t") ? stack : 0, marginBottom: corner.startsWith("b") ? stack : 0,
   };
 
@@ -132,7 +131,7 @@ export function FloorCall({ floor, lines, live, reducedMotion }: { floor: (follo
   } as const;
 
   return (
-    <div ref={frame} className="relative w-full min-w-0 max-w-full" style={swapped ? { padding: "24px 0" } : undefined}>
+    <div ref={frame} className="relative w-full min-w-0 max-w-full" style={swapped ? { padding: "24px 0", minHeight: tileH + INSET * 2 } : undefined}>
       <motion.div ref={floorPane} layout layoutId="call-floor" transition={transition} style={swapped ? floorTile : bigFloor} {...(swapped ? tileProps : {})}>
         {floor(swapped)}
         {swapped && swapButton("Show floor full screen")}
