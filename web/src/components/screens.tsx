@@ -2,6 +2,7 @@
 // Page bodies. The pages in app/buyer and app/market keep their hooks and pairing logic and render these.
 // Both are pure: give them view models and they draw. See README for the hook-to-view mapping.
 import { originMixLabel, roundTitle, type ApprovalView, type ReviewView, type FeedItem, type FloorEventView, type GoalView, type LearningView, type LossReport, type RankedBid, type ReceiptView, type RoundView, type SellerLine, type ShieldView, type VetoView } from "@/lib/screens";
+import type { CrsView } from "@/lib/crs";
 import type { ReactNode } from "react";
 import { ASI_ONE_URL } from "@/lib/agentFeed";
 import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
@@ -13,6 +14,7 @@ import { Card, Details, Label, Pill, SampleOnly, Unavailable, money } from "./ui
 
 
 export interface BuyerScreenProps {
+  crs?: (sellerId: string) => CrsView | null;
   /** The planner's build (parts, sellers, steps); the SIM sample run is shown, labelled, until build rounds are live. */
   build?: BuildResult;
   /** This buyer's searches, open ones first; the first is the active one. */
@@ -96,7 +98,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
             <>
               <Details summary="About the round below" className="mt-0"><p>The latest public round. It is not yet matched to one search, because a round carries a need id and not a goal id. Sample cards are labelled SIM.</p></Details>
               <SampleOnly on={!!s.bids}><HeroPrice bids={p.bids} cap={null} /></SampleOnly>
-              <SampleOnly on={!!s.bids}><RankedBids bids={p.bids} revealKey={p.revealKey} /></SampleOnly>
+              <SampleOnly on={!!s.bids}><RankedBids bids={p.bids} revealKey={p.revealKey} crs={p.crs} /></SampleOnly>
               <div className={`grid gap-3.5 ${p.review ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
                 <SampleOnly on={!!s.veto}><VetoCard veto={p.veto} /></SampleOnly>
                 <SampleOnly on={!!s.shield}><ShieldCard shield={p.shield} /></SampleOnly>
@@ -115,6 +117,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
 }
 
 export interface MarketScreenProps {
+  crs?: (sellerId: string) => CrsView | null;
   round: RoundView | null;
   cap: number | null;
   lines: SellerLine[];
@@ -157,7 +160,7 @@ export function MarketScreen(p: MarketScreenProps) {
             <SampleOnly on={!!s.round}><RoundTimeline round={p.round} /></SampleOnly>
             <SampleOnly on={!!s.lines}><RefereeCard round={p.round} lines={p.lines} /></SampleOnly>
           </div>
-          <SampleOnly on={!!s.lines}><SellerLines lines={p.lines} cap={p.cap} /></SampleOnly>
+          <SampleOnly on={!!s.lines}><SellerLines lines={p.lines} cap={p.cap} crs={p.crs} /></SampleOnly>
           <div className="grid gap-3.5 lg:grid-cols-2">
             <SampleOnly on={!!s.lossReports}><LossReports reports={p.lossReports} note={p.lossNote} /></SampleOnly>
             <div className="grid content-start gap-3.5">

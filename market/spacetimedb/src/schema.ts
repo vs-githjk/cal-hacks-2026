@@ -453,6 +453,20 @@ export const roundTimer = table(
   },
 );
 
+/**
+ * CRS supplier signal (docs/changes/0033-A-crs-supplier-signal.md): the band only, per seller, written by the referee.
+ * Public so every screen can show it; never a raw CRS response or identity data.
+ */
+export const supplierSignal = table(
+  { name: 'supplier_signal', public: true },
+  {
+    supplierId: t.string().primaryKey(),
+    stability: t.string(), // verified_stable | caution | not_verified
+    checkedAt: t.string(), // the original check time (ISO); a recorded result keeps it
+    source: t.string(), // sandbox | recorded | live | mirror | simulated
+  },
+);
+
 /** #374 public telemetry row types: counts only, no money, names or per-user data. */
 export const TelemetryRow = t.object('TelemetryRow', {
   accountsCreated: t.u32(), goalsPosted: t.u32(), roundsOpened: t.u32(), roundsClosed: t.u32(), bids: t.u32(),
@@ -469,6 +483,6 @@ const spacetimedb = schema({
   need, needItem, goal, goalItem, notification, owner, role, pairCode, pairAttempt, buyerProfile, signupThrottle, approvalCode, lossReport,
   sellerFloor, bid, bidCheck,
   mandate, approval, payment, allowance, receivingEvent,
-  round, roundResult, roundResultSealed, rejectedAttempt, floorEvent, agentEvent, stockHold, persona, roundTimer,
+  round, roundResult, roundResultSealed, rejectedAttempt, floorEvent, agentEvent, stockHold, persona, roundTimer, supplierSignal,
 });
 export default spacetimedb;

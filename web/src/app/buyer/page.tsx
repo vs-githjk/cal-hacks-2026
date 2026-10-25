@@ -10,6 +10,7 @@ import { RecentPurchases } from "@/components/memory";
 import { BuyerScreen } from "@/components/screens";
 import { allowanceForBuyer, asSim, bidsFromRows, dealFromRows, feedFromRows, goalsForBuyer, latestRound, reviewFromRows, shieldFromRows, vetoFromRows } from "@/lib/screens";
 import * as sample from "@/lib/sample";
+import { crsFor } from "@/lib/crs";
 
 /** The dashboard. BuyerGate (app/buyer/layout.tsx) has already proved who this screen is paired as. */
 export default function BuyerPage() {
@@ -22,6 +23,9 @@ export default function BuyerPage() {
   const [events, eventsReady] = useTable(tables.floorEvent);
   const [notes] = useTable(tables.myNotifications);
   const [pending] = useTable(tables.myPendingApprovals);
+  const [profiles] = useTable(tables.myBuyerProfile);
+  const [signals] = useTable(tables.supplierSignal);
+  const crs = (sellerId: string) => crsFor(signals, sellerId, Date.now()); // bands only (docs/changes/0033)
   const [checks] = useTable(tables.myBidChecks);
   const [deals] = useTable(tables.myDeals);
 
@@ -40,6 +44,7 @@ export default function BuyerPage() {
   // #191-5: veto, Shield, approval and receipt come from my_bid_checks and my_deals; a card shows the SIM sample only while its row is missing.
   return (
     <BuyerScreen
+      crs={crs}
       build={liveBuild ?? undefined}
       connecting={!goalsReady || !eventsReady}
       goals={goals}

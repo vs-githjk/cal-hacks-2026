@@ -1,6 +1,8 @@
 // web/src/components/market.tsx
 // The referee's floor: sealed round timeline, bids per seller line, loss reports, learning diff, events feed.
 import { clusterArrivals, type FloorEventView, type LearningView, type LossReport, type RoundView, type SellerLine } from "@/lib/screens";
+import type { CrsView } from "@/lib/crs";
+import { CrsSignal } from "./crs";
 import { sourceText } from "@/lib/url";
 import { usePageHost } from "@/lib/useApiBase";
 import { Card, Label, OriginChip, Stat, Tag, Verdict, clock, money } from "./ui";
@@ -107,7 +109,7 @@ export function RefereeCard({ round, lines }: { round: RoundView; lines: SellerL
 }
 
 /** Bar is landed price against the cap, so a judge sees "cheap but vetoed" and "over cap" at a glance. */
-export function SellerLines({ lines, cap }: { lines: SellerLine[]; cap: number | null }) {
+export function SellerLines({ lines, cap, crs }: { lines: SellerLine[]; cap: number | null; crs?: (sellerId: string) => CrsView | null }) {
   const scale = cap ?? Math.max(1, ...lines.map((l) => l.landed));
   return (
     <Card>
@@ -125,11 +127,12 @@ export function SellerLines({ lines, cap }: { lines: SellerLine[]; cap: number |
             <tbody>
               {lines.map((l, i) => {
                 const o = l.outcome;
+                const signal = l.sellerId && crs ? crs(l.sellerId) : null;
                 const dim = o.kind === "ineligible" || o.kind === "refused" || o.kind === "alt";
                 const fill = o.kind === "won" ? "bg-mint" : dim ? "bg-slate opacity-50" : l.origin === "SIM" ? "bg-amber" : l.origin === "LIVE" ? "bg-mint" : "bg-sky";
                 return (
-                  <tr key={i} className={o.kind === "won" ? "bg-mint-soft" : dim ? "text-muted" : ""}>
-                    <Td><span className="font-semibold text-ink">{l.seller}</span> <OriginChip origin={l.origin} />{o.kind === "won" && <> <Tag>Winner</Tag></>}</Td>
+                  <tr key={i} className={`${o.kind === "won" ? "bg-mint-soft" : dim ? "text-muted" : ""}${signal?.greyed ? " opacity-50" : ""}`}>
+                    <Td><span className="font-semibold text-ink">{l.seller}</span> <OriginChip origin={l.origin} /><CrsSignal view={signal} />{o.kind === "won" && <> <Tag>Winner</Tag></>}</Td>
                     <Td><Tag>{l.condition}</Tag>{o.kind === "alt" && <span className="ml-1.5 text-[13px] text-muted">alt</span>}</Td>
                     <Td right className="tabular-nums">{o.kind === "refused" && l.landed === 0 ? "·" : o.kind === "won" ? <b>{money(l.landed)}</b> : money(l.landed)}</Td>
                     <Td>
@@ -142,6 +145,7 @@ export function SellerLines({ lines, cap }: { lines: SellerLine[]; cap: number |
                     <Td>
                       {o.kind === "won" && <Verdict kind="buy">won</Verdict>}
                       {o.kind === "ranked" && <Verdict kind="buy">buy</Verdict>}
+                      {(o.kind === "ranked" || o.kind === "won") && o.note && <span className="ml-1.5 text-[13px] text-amber">{o.note}</span>}
                       {o.kind === "held" && <><Verdict kind="caution">held back</Verdict> <span className="text-[13px] text-muted">{o.note?.replace(/^held back: /, "")}</span></>}
                       {o.kind === "veto" && <><Verdict kind="veto">veto</Verdict> <span className="text-[13px] text-muted">{o.note}</span></>}
                       {(o.kind === "ineligible" || o.kind === "alt") && <span className="text-[13px] text-muted">{o.kind === "alt" ? o.note : `ineligible, ${o.note}`}</span>}
