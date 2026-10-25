@@ -48,6 +48,7 @@ def test_pulse_agent_has_handle_readme_and_chat(monkeypatch):
     kwargs = constructor.call_args.kwargs
     assert kwargs['handle'] == 'techbazaarpulse'
     assert kwargs['readme_path'].endswith('pulse' + os.sep + 'AGENTVERSE.md')
+    assert kwargs['avatar_url'].endswith('/agents/avatars/pulse.png')
     monkeypatch.setenv('PULSE_AGENT_HANDLE', 'mypulse')
     with patch('uagents.Agent') as constructor:
         orchestrator.build_agent(Mock())

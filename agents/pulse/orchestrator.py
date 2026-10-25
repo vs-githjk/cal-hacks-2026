@@ -693,6 +693,8 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
                       handle=os.environ.get("PULSE_AGENT_HANDLE") or "techbazaarpulse",
                       description="Teaches sellers and buyers the market's week and month: price trends from Tiger Data, "
                                   "CRS verified seller counts, and a note for every seller that lost a round.")
+    if avatar := common.avatar_url("pulse"):
+        args["avatar_url"] = avatar
     readme = Path(__file__).with_name("AGENTVERSE.md")
     if readme.exists():
         args["readme_path"] = str(readme)
