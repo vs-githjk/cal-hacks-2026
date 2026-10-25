@@ -25,9 +25,9 @@ Secure is the goal we build toward, not a claim the numbers support yet. The mea
 
 <div align="center">
 
-[![Watch the Fish Market demo](https://img.youtube.com/vi/FWOXxhP5-w8/maxresdefault.jpg)](https://youtu.be/FWOXxhP5-w8)
+[![Watch the Fish Market walkthrough](https://img.youtube.com/vi/kv0vo8mmN5U/maxresdefault.jpg)](https://youtu.be/kv0vo8mmN5U)
 
-**[Watch the demo (3 min)](https://youtu.be/FWOXxhP5-w8)**
+**[Watch the walkthrough (3 min)](https://youtu.be/kv0vo8mmN5U)**
 
 </div>
 
@@ -152,7 +152,9 @@ Public data: the CPSC recalls API and [docyx/pc-part-dataset](https://github.com
 
 ## Fetch.ai agents
 
-<!-- VIDEO: fetch -->
+[![Fish Market on Fetch.ai: nine agents in ASI:One](https://img.youtube.com/vi/r7fuf_UPoa8/maxresdefault.jpg)](https://youtu.be/r7fuf_UPoa8)
+
+**[Watch the Fetch.ai video (3 min)](https://youtu.be/r7fuf_UPoa8)**: the whole purchase in one ASI:One chat, then the agent-to-agent backend.
 
 Nine agents, each with one job. Eight are registered on Agentverse with a mailbox so ASI:One can reach them (all eight show as active in Agentverse search, Oct 25 06:40 PDT); Central Comp MIRROR runs locally on purpose. Addresses are the ones the running agents print at start (`.run/logs/`).
 
