@@ -1,15 +1,14 @@
 "use client";
 // web/src/components/floor/FloorAquariumPixel.tsx
-// ?scene=aquarium: a Pac-Man reef maze inside a glass tank. Fish patrol short loops around their pockets, Pac-Man travels the maze
+// The /floor design: a Pac-Man reef maze inside a glass tank. Fish patrol short loops around their pockets, Pac-Man travels the maze
 // to eat the highest price. Four support agents (Shield, Advocate, Checker, Referee) swim in only while they act, one at a time.
-// Same data contract and behaviour rules as FloorRingPixel; the phase is the source of truth.
+// The phase is the source of truth.
 import { useEffect, useId, useRef, useState, type CSSProperties, type JSX, type ReactNode } from "react";
 import type { FloorPhase, FloorScript, OutReason, SellerView } from "./floorPhases.ts";
-import type { FloorRendererProps } from "./FloorRingPixel.tsx";
 import { POCKET_IDS, findTile, heading, loopTile, mazePath, patrolLoop, pocketRect, type Tile } from "./maze.ts";
 import { followBox } from "./callState.ts";
 import { useFollowViewBox } from "./followCam.ts";
-import { ADVOCATE_COLORS, AQUA, AVATAR_GRIDS, CHECKER, GHOST, GHOST_COLORS, GHOST_SCARED, HAMMERHEAD, HAMMER_COLORS, MAZE, MAZE_ORIGIN, PAC, PAC_CLOSED, PAL, PRODUCT_COLORS, PRODUCT_ICONS, PUFFER_ADVOCATE, REEF, REFEREE, REFEREE_UP, WEED_OFFSETS, avatarColors, avatarFor, mazeWallPaths, productKind, runs, sandCells, type Grid, type ProductKind } from "./pixelArt.ts";
+import { ADVOCATE_COLORS, AQUA, AVATAR_GRIDS, CHECKER, GHOST_COLORS, HAMMERHEAD, HAMMER_COLORS, MAZE, MAZE_ORIGIN, PAC, PAC_CLOSED, PAL, PRODUCT_COLORS, PRODUCT_ICONS, PUFFER_ADVOCATE, REEF, REFEREE, REFEREE_UP, WEED_OFFSETS, avatarColors, avatarFor, mazeWallPaths, productKind, runs, sandCells, type Grid, type ProductKind } from "./pixelArt.ts";
 
 const MONO = "var(--font-geist-mono, ui-monospace, monospace)";
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -24,6 +23,8 @@ const OX = TANK.x;
 const OY = WATER_Y;
 const WALL_TF = `translate(${OX} ${OY}) scale(${TW / 40} ${TH / 40}) translate(${-MAZE_ORIGIN.x} ${-MAZE_ORIGIN.y})`;
 const FC = 4; // sprite cell size before the cast scale
+export interface FloorRendererProps { script: FloorScript; phase: FloorPhase; reducedMotion: boolean; width: number; follow?: boolean }
+
 const S = 0.9; // fish, Pac-Man and the support agents (they scale with the tile): fish 65 x 50, Pac-Man 47
 const PC = 4;
 const PW = 13 * PC * S;
@@ -532,7 +533,7 @@ function place(c: Cand, e: number, phase: FloorPhase, reduced: boolean, continui
   };
 }
 
-export function FloorAquariumPixel({ script, phase, theme, reducedMotion, follow = false }: FloorRendererProps): JSX.Element {
+export function FloorAquariumPixel({ script, phase, reducedMotion, follow = false }: FloorRendererProps): JSX.Element {
   const uid = useId().replace(/:/g, "");
   const [tick, setTick] = useState(0);
   const [clock, setClock] = useState<{ p: FloorPhase | null; ms: number }>({ p: null, ms: 0 });
@@ -622,17 +623,16 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, follow
       if (e >= 1500) { gone = true; stamp = null; sign = null; }
     }
     const color = GHOST_COLORS[(s.slot - 1) % 4] ?? PAL.red;
-    const fish = theme === "fish";
     const av = avatarFor(s.agent);
-    const grid = fish ? AVATAR_GRIDS[av] : scared ? GHOST_SCARED : GHOST;
+    const grid = AVATAR_GRIDS[av];
     const W = gridW(grid), H = gridH(grid);
     const t = frozenNow[s.id] ?? tick;
     const centre = reducedMotion ? (POCKETS[i % 8] ?? px(START)) : px(fishTile(i, t));
     rows.push({
       id: s.id, name: s.name, sx: centre.x - W / 2, sy: centre.y - H / 2, cx: W / 2, W, H, color, win, newly, gone, shrink: eatsUp, burst, sign, stamp, grid, reason: r, ctag: null,
-      flip: fish && !win && !reducedMotion && heading(LOOPS[i % 8] ?? [], t + 2 * i) > 0,
+      flip: !win && !reducedMotion && heading(LOOPS[i % 8] ?? [], t + 2 * i) > 0,
       pos: { x: centre.x - W / 2, y: centre.y - H / 2 },
-      colors: fish ? avatarColors(av, color, scared) : scared ? { X: PAL.scared } : { X: color, W: PAL.white, P: PAL.pupil },
+      colors: avatarColors(av, color, scared),
       field: false,
       tag: phase.injection === s.id && !scared && !gone && v.state !== "eaten",
       w: Math.max(72, (sign?.label.length ?? 0) * 9 + 22, (sign?.sub?.length ?? 0) * 6.2 + 20),

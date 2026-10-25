@@ -1,10 +1,9 @@
 // web/src/components/floor/floorPhases.ts
-// The /floor ring's script: pure data, no React. REFERENCE is the docs/design-system/floor.md run (31 s loop, 4 sellers).
+// The /floor script: pure data, no React. REFERENCE is the docs/design-system/floor.md run (31 s loop, 4 sellers).
 // floorScript turns the latest closed round's public rows into the same shape via projectArenaScene, so no outcome is re-derived here.
 // A seller's price is null in every phase before its reveal: a sealed price never leaves this file.
 import { projectArenaScene, type ArenaRows, type SceneOffer } from "../../lib/arenaScene.ts";
 
-export type Theme = "ghosts" | "fish";
 export type Slot = 1 | 2 | 3 | 4; // colour slot: ghost-1..4
 export type SellerState = "sealed" | "open" | "eaten" | "winner";
 export type OutReason = "highest_price" | "outranked" | "failed_fit" | "shield_block" | "advocate_veto" | "refused";

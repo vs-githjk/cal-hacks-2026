@@ -1,11 +1,10 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { BRAND } from "@/lib/brand";
 import type { FloorPhase, FloorScript, SellerView } from "@/components/floor/floorPhases";
 import { AVATAR_GRIDS, avatarColors, avatarFor, runs } from "@/components/floor/pixelArt";
 
-/** The HUD around the stage: top-left lines and referee call, the seller ledger and the deal card.
+/** The HUD around the stage: the seller ledger and the deal card.
  * Pure presentational: everything comes from the script and the current phase. The ledger is always in flow BELOW the stage.
  * Under 640 px wide the HUD sits above the stage and the deal card below it, and the ledger is two by two (floor.md "Phone shell").
  * Sizes are design pixels at the 960 wide stage, multiplied by --s (width / 960), so the smallest text is 11 design px and reads at 22 px on a 1920 frame. */
@@ -13,13 +12,12 @@ import { AVATAR_GRIDS, avatarColors, avatarFor, runs } from "@/components/floor/
 const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const usd = (n: number) => USD.format(n);
 
-/** Ledger dot colours by seller slot: the pixel ring's ghost palette. */
+/** Ledger dot colours by seller slot. */
 const SLOT_COLOR: Record<number, string> = { 1: "#e5484d", 2: "#f38ba8", 3: "#22d3ee", 4: "#f59e0b" };
 
 const COMPACT_BELOW = 640;
 const TWO_COLS_AT = 1024;
 const SHIELD = "#22d3ee";
-const REFEREE = "#c7d4ff";
 const MUTED = "#8fa0b2";
 const MINT = "#34d399";
 const SANS: CSSProperties = { fontFamily: "var(--font-geist), Geist, ui-sans-serif, system-ui, sans-serif" };
@@ -34,21 +32,8 @@ const css = `
 .fh-calm .fh-in { animation: none; }
 @media (prefers-reduced-motion: reduce) { .fh-in { animation: none; } }
 .fh-stage { position: relative; margin: 0 auto; overflow: hidden; }
-.fh-hud { display: grid; gap: calc(6px * var(--s)); pointer-events: none; }
-.fh-over .fh-hud { position: absolute; left: calc(28px * var(--s)); top: calc(22px * var(--s)); right: 30%; z-index: 2; }
-.fh-flow .fh-hud { padding: 12px 38% 4px 12px; }
 .fh-bare { border-radius: 0; box-shadow: none; }
 .fh-bare .fh-stage { height: auto !important; }
-.fh-live { font-size: calc(11px * var(--s)); line-height: 1.35; letter-spacing: 0.08em; text-transform: uppercase; color: ${MUTED}; font-weight: 500; }
-.fh-sim { display: inline-block; margin-left: 0.8em; padding: 0 0.5em; border: 1px dashed ${MUTED}; border-radius: 4px; color: #eef3f8; }
-.fh-round { white-space: normal; overflow-wrap: anywhere; font-size: calc(17px * var(--s)); line-height: 1.3; font-weight: 500; min-height: 1.3em; }
-.fh-flow .fh-round { font-size: 14px; }
-.fh-round em { font-style: normal; color: ${SHIELD}; }
-.fh-call { min-height: calc(30px * var(--s)); }
-.fh-flow .fh-call { min-height: 28px; }
-.fh-call span { display: inline-flex; flex-wrap: wrap; align-items: center; gap: calc(8px * var(--s)); max-width: 100%; min-height: calc(30px * var(--s)); padding: calc(4px * var(--s)) calc(16px * var(--s)); border-radius: calc(15px * var(--s)); border: 1px solid #c7d4ff99; font-size: calc(12px * var(--s)); line-height: 1.3; }
-.fh-call span b { color: ${REFEREE}; font-weight: 600; font-size: calc(13px * var(--s)); }
-.fh-call span i { font-style: normal; }
 .fh-simchip { position: absolute; z-index: 3; left: calc(20px * var(--s)); top: calc(16px * var(--s)); padding: 0 0.55em; border: 1px solid #eef3f866; border-radius: 4px; background: #0b1b2b99; color: #eef3f8; font-size: calc(10px * var(--s)); line-height: 1.7; letter-spacing: 0.08em; pointer-events: none; }
 .fh-ledger { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(6px * var(--u)); padding: calc(10px * var(--u)) calc(20px * var(--s)) calc(14px * var(--u)); }
 .fh-two .fh-ledger { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -85,38 +70,12 @@ const css = `
 .fh-flow .fh-deal .l, .fh-flow .fh-deal .p { font-size: 12px; }
 `;
 
-function roundLine(script: FloorScript, phase: FloorPhase): ReactNode {
-  const alive = Object.values(phase.sellers).filter((v) => v.state !== "eaten").length;
-  const head = `Round ${phase.round} of ${phase.rounds}`;
-  const part = <em>{phase.part}</em>;
-  if (phase.kind === "crown" || phase.kind === "deal" || phase.kind === "paid") {
-    const won = Object.values(phase.sellers).find((v) => v.state === "winner")?.price ?? null;
-    const price = phase.deal?.price ?? won;
-    return <>Deal · {part}{price !== null && <> · {usd(price)}</>}{phase.deal?.approvedByPhone && <> · approved by phone</>}</>;
-  }
-  const status = phase.kind === "check" ? "the checker verifies" : Object.values(phase.sellers).some((v) => v.price !== null) ? "revealed" : "sealed";
-  return <>{head} · {part} · {alive} seller{alive === 1 ? "" : "s"} · {status}</>;
-}
-
 function wordClass(v: SellerView): string {
   if (v.state === "winner" || v.ledger.startsWith("Fit OK")) return "good";
   if (v.reason === "shield_block") return "shield";
   if (v.reason === "failed_fit") return "warn";
   if (v.reason === "highest_price" || v.reason === "outranked" || v.reason === "advocate_veto" || v.reason === "refused") return "bad";
   return "";
-}
-
-function Top({ script, phase }: { script: FloorScript; phase: FloorPhase }) {
-  return (
-    <div className="fh-hud fh-mono">
-      <div className="fh-live">
-        Live from the {BRAND} floor · refereed by CRS
-        {script.sim && <span className="fh-sim">SIM</span>}
-      </div>
-      <div className="fh-round" key={`${phase.kind}-${phase.round}`}><span className="fh-in" style={{ display: "inline-block", ...SANS }}>{roundLine(script, phase)}</span></div>
-      <div className="fh-call">{phase.callText && <span className="fh-in" key={phase.callText}><b style={SANS}>Referee</b><i className="fh-mono">{phase.callText}</i></span>}</div>
-    </div>
-  );
 }
 
 /** One plain line about a seller right now, from its state, ledger and reason. */
@@ -200,26 +159,22 @@ export const FRAME = { w: 1920, h: 1080, stageW: 1600 } as const;
 
 /** Wraps the renderer (children) with the HUD. `width` is the stage's CSS width; the stage keeps a 16:9 box and the ledger sits below it.
  * `frame` lays the whole thing out in exactly FRAME.w x FRAME.h (the stage is then FRAME.stageW wide). */
-export function FloorHud({ script, phase, width, frame = false, reducedMotion = false, bare = false, scene = "ring", children }: { script: FloorScript; phase: FloorPhase; width: number; frame?: boolean; reducedMotion?: boolean; bare?: boolean; scene?: "ring" | "aquarium"; children: ReactNode }) {
+export function FloorHud({ script, phase, width, frame = false, reducedMotion = false, bare = false, children }: { script: FloorScript; phase: FloorPhase; width: number; frame?: boolean; reducedMotion?: boolean; bare?: boolean; children: ReactNode }) {
   const compact = !frame && width < COMPACT_BELOW;
   const s = frame ? FRAME.w / 960 : compact ? 1 : Math.max(0.5, width / 960);
   const stageW = frame ? FRAME.stageW : width;
-  const aqua = scene === "aquarium";
-  const showTop = !bare && !aqua;
   const two = frame || width >= TWO_COLS_AT;
   const vars = { "--s": s, "--u": frame ? 2 : 1, "--r": compact ? 0.8 : 1, ...(frame ? { width: FRAME.w, height: FRAME.h } : {}) } as CSSProperties;
   const stage = (
     <div className="fh-stage" style={{ width: frame ? stageW : "100%", height: bare ? undefined : (stageW * 9) / 16 }}>
       {children}
-      {!compact && showTop && <Top script={script} phase={phase} />}
-      {aqua && !bare && script.sim && <span className="fh-simchip fh-mono">SIM</span>}
+      {!bare && script.sim && <span className="fh-simchip fh-mono">SIM</span>}
       {!compact && !bare && phase.deal && <Deal deal={phase.deal} part={script.part} />}
     </div>
   );
   return (
     <div className={`fh ${compact ? "fh-flow" : "fh-over"}${two ? " fh-two" : ""}${frame ? " fh-frame" : ""}${bare ? " fh-bare" : ""}${reducedMotion ? " fh-calm" : ""}`} style={vars}>
       <style>{css}</style>
-      {compact && showTop && <Top script={script} phase={phase} />}
       {stage}
       {compact && !bare && phase.deal && <Deal deal={phase.deal} part={script.part} />}
       {!bare && <Ledger script={script} phase={phase} />}
