@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
 import * as sample from "./sample.ts";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, stateLabel, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid, buyerKpis } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, stateLabel, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid, buyerKpis, myRounds } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -444,4 +444,10 @@ test("buyerKpis: a zero allowance says every purchase needs your OK", () => {
   const al = { perPurchase: 0, periodLimit: 0, period: "week", spent: 0, ladderStep: 0 };
   assert.equal(buyerKpis([], [], null, al, 0)[3]!.line, "Every purchase needs your OK");
   assert.equal(buyerKpis([], [], null, al, 2)[3]!.line, "Every purchase needs your OK · 2 purchases");
+});
+
+test("myRounds ignores another buyer's newer round and returns none without checks", () => {
+  const rs = [round({ id: "round-mine", openedAt: ts(T0) }), round({ id: "round-other", openedAt: ts(T0 + 5000) })];
+  assert.deepEqual(myRounds(rs, [{ roundId: "round-mine" }]).map((r) => r.id), ["round-mine"]);
+  assert.deepEqual(myRounds(rs, []), []);
 });

@@ -595,3 +595,9 @@ export function buyerKpis(goals: readonly GoalView[], bids: readonly RankedBid[]
   };
   return [search, offer, needs, allow];
 }
+
+/** Rounds this buyer took part in: those named by their own my_bid_checks rows (the server filters those to the buyer), newest first. */
+export function myRounds<R extends RoundRow>(rounds: readonly R[], checks: readonly { roundId: string }[]): R[] {
+  const ids = new Set(checks.map((c) => c.roundId));
+  return rounds.filter((r) => ids.has(r.id)).sort((a, b) => (a.openedAt.microsSinceUnixEpoch < b.openedAt.microsSinceUnixEpoch ? 1 : -1));
+}
