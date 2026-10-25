@@ -1,5 +1,5 @@
 // web/src/components/floor/floorPhases.ts
-// The /floor ring's script: pure data, no React. REFERENCE is the docs/design-system/floor.md run (24 s loop, 4 sellers).
+// The /floor ring's script: pure data, no React. REFERENCE is the docs/design-system/floor.md run (31 s loop, 4 sellers).
 // floorScript turns the latest closed round's public rows into the same shape via projectArenaScene, so no outcome is re-derived here.
 // A seller's price is null in every phase before its reveal: a sealed price never leaves this file.
 import { projectArenaScene, type ArenaRows, type SceneOffer } from "../../lib/arenaScene.ts";
@@ -10,7 +10,7 @@ export type SellerState = "sealed" | "open" | "eaten" | "winner";
 export type OutReason = "highest_price" | "outranked" | "failed_fit" | "shield_block" | "advocate_veto" | "refused";
 export interface FloorSeller { id: string; name: string; origin: "LIVE" | "MIRROR" | "SIM"; slot: Slot }
 export interface SellerView { state: SellerState; price: number | null; ledger: string; reason: OutReason | null; checkedAgo: number | null } // ledger: "Sealed" | "$1,329.00" | "Eaten · highest price" | "Blocked · Shield" | "Out · fit uncertain" | "Fit OK · 304 mm · no recall" | "Winner"; checkedAgo: Bright Data re-check age in seconds, null if unknown
-export type PhaseKind = "sealed" | "reveal" | "call" | "inject" | "shield" | "check" | "eat" | "crown" | "deal" | "paid";
+export type PhaseKind = "sealed" | "reveal" | "call" | "inject" | "shield" | "check" | "eat" | "crown" | "deal" | "paid" | "think";
 export interface FloorPhase {
   at: number;            // seconds from the start of the loop
   kind: PhaseKind;
@@ -22,8 +22,16 @@ export interface FloorPhase {
   shieldAt: string | null;  // seller id the Shield stands in front of
   checkerAt: string | null; // seller id the checker is at
   pip: string[];            // the ASI:One PiP messages visible now, oldest first
+  think?: { who: string; name: string; text: string } | null; // a hold beat: this agent is shown thinking, then says `text` (the chat lines come from here)
   deal: { price: number; part: string; lines: string[]; approvedByPhone: boolean; stripeTest: boolean } | null;
 }
+/** Hold ceilings in seconds for the thinking beats. */
+export const THINK_CEIL = { buyer: 2.5, shield: 1.2, advocate: 2.5, summary: 5 } as const;
+const BUYER = { who: "buyer", name: "Fish Market Buyer" };
+const SHIELD = { who: "shield", name: "Shield" };
+const ADVOCATE = { who: "advocate", name: "Advocate" };
+const SUMMARY = "Bought the ASUS Prime RTX 5070 Ti OC from Best Buy for $1,299.99 before tax. Two offers were out on price, one was blocked by the Shield, and one failed the fit check. Approved by your phone code.";
+
 export interface FloorScript { sim: boolean; part: string; sellers: FloorSeller[]; phases: FloorPhase[]; duration: number }
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -37,7 +45,7 @@ const LEDGER: Record<OutReason, string> = {
   refused: "Out · refused",
 };
 
-type Extras = Partial<Pick<FloorPhase, "buyerAt" | "callText" | "injection" | "shieldAt" | "checkerAt" | "deal">>;
+type Extras = Partial<Pick<FloorPhase, "buyerAt" | "callText" | "injection" | "shieldAt" | "checkerAt" | "deal" | "think">>;
 
 /** Accumulates seller state and snapshots it into phases, so each phase carries every seller. */
 class Builder {
@@ -61,7 +69,7 @@ class Builder {
     this.phases.push({
       at, kind, round: this.round, rounds: this.rounds, part: this.part, sellers,
       buyerAt: x.buyerAt ?? null, callText: x.callText ?? null, injection: x.injection ?? null, shieldAt: x.shieldAt ?? null, checkerAt: x.checkerAt ?? null,
-      pip: [...this.pip], deal: x.deal ?? null,
+      pip: [...this.pip], think: x.think ?? null, deal: x.deal ?? null,
     });
   }
 }
@@ -79,8 +87,10 @@ function buildReference(): FloorScript {
   const dealPart = "ASUS Prime RTX 5070 Ti OC · Best Buy";
   const dealLines = ["Fit confirmed 304 mm", "No recall", "CRS verified_stable", "Above the allowance: approved by phone code"];
 
-  b.pip = ["RTX 5070 Ti under $1,400 by Friday", "4 sealed bids in. No seller sees the buyer's budget. Round 1 now."];
+  b.pip = ["RTX 5070 Ti under $1,400 by Friday"];
   b.push(0, "sealed");
+  b.push(1.1, "think", { think: { ...BUYER, text: "Reading your goal: one RTX 5070 Ti under $1,400 by Friday." } }); // 2.5 s hold, ends at the reveal
+  b.pip.push("4 sealed bids in. No seller sees the buyer's budget. Round 1 now.");
   b.reveal(ids); b.push(3.6, "reveal", { buyerAt: "s1" });
   b.push(4.6, "call", { buyerAt: "s1", callText: "Highest price is out: $1,329.00, Seller 1" });
   b.eat("s1", "highest_price"); b.push(5.3, "eat", { buyerAt: "s1", callText: "Highest price is out: $1,329.00, Seller 1" });
@@ -89,20 +99,23 @@ function buildReference(): FloorScript {
   b.push(8.2, "inject", { injection: "s2" });
   b.reveal(["s2", "s3", "s4"]); b.push(8.9, "reveal", { injection: "s2" });
   b.push(9.1, "shield", { injection: "s2", shieldAt: "s2" });
-  b.pip.push("Shield blocked Seller 2: override attempt in the listing.");
-  b.eat("s2", "shield_block"); b.push(10.1, "eat", { injection: "s2", shieldAt: "s2", callText: "Injected listing quarantined: Seller 2 is out" });
+  b.push(9.5, "think", { injection: "s2", shieldAt: "s2", think: { ...SHIELD, text: "Blocked Seller 2: hidden instructions aimed at the buying agent." } }); // 1.2 s hold
+  b.eat("s2", "shield_block"); b.push(10.7, "eat", { injection: "s2", shieldAt: "s2", callText: "Injected listing quarantined: Seller 2 is out" });
 
-  b.round = 3; b.push(12, "check", { checkerAt: "s3" });
-  b.eat("s3", "failed_fit"); b.push(13.4, "eat", { checkerAt: "s3", callText: "eBay listing is out: fit uncertain" });
-  b.mark("s4", "Fit OK · 304 mm · no recall"); b.push(15.1, "check", { checkerAt: "s4" });
-  b.win("s4"); b.pip.pop(); b.pip.push("Winner $1,299.99. Above the allowance, so the buyer gets a call with the code.");
-  b.push(17.8, "crown", { buyerAt: "s4", callText: "Winner: Best Buy listing at $1,299.99 · CRS verified_stable" });
-  b.push(19.2, "deal", { buyerAt: "s4", deal: { price: 1299.99, part: dealPart, lines: dealLines, approvedByPhone: true, stripeTest: false } });
-  b.push(22, "paid", { buyerAt: "s4", deal: { price: 1299.99, part: dealPart, lines: [...dealLines, "Stripe test mode"], approvedByPhone: true, stripeTest: true } });
-  return { sim: true, part: "GPU", sellers, phases: b.phases, duration: 24 };
+  b.round = 3; b.push(12.6, "check", { checkerAt: "s3" });
+  b.push(13, "think", { checkerAt: "s3", think: { ...ADVOCATE, text: "Is it new, open-box, refurbished or used?" } }); // 2 s, under the 2.5 s ceiling
+  b.push(15, "think", { checkerAt: "s3", think: { who: "seller_3", name: "eBay listing", text: "Open-box." } }); // 2 s
+  b.eat("s3", "failed_fit"); b.push(17, "eat", { checkerAt: "s3", callText: "eBay listing is out: fit uncertain" });
+  b.mark("s4", "Fit OK · 304 mm · no recall"); b.push(18.7, "check", { checkerAt: "s4" });
+  b.win("s4"); b.pip.push("Winner $1,299.99. Above the allowance, so the buyer gets a call with the code.");
+  b.push(21.4, "crown", { buyerAt: "s4", callText: "Winner: Best Buy listing at $1,299.99 · CRS verified_stable" });
+  b.push(22.8, "deal", { buyerAt: "s4", deal: { price: 1299.99, part: dealPart, lines: dealLines, approvedByPhone: true, stripeTest: false } });
+  b.push(24, "think", { buyerAt: "s4", think: { ...BUYER, text: SUMMARY }, deal: { price: 1299.99, part: dealPart, lines: dealLines, approvedByPhone: true, stripeTest: false } }); // 5 s hold
+  b.push(29, "paid", { buyerAt: "s4", deal: { price: 1299.99, part: dealPart, lines: [...dealLines, "Stripe test mode"], approvedByPhone: true, stripeTest: true } });
+  return { sim: true, part: "GPU", sellers, phases: b.phases, duration: 31 };
 }
 
-/** The floor.md reference scenario: 4 sellers, 3 rounds, 24 s loop. Also the fallback when there is nothing real to show. */
+/** The floor.md reference scenario: 4 sellers, 3 rounds, 31 s loop. Also the fallback when there is nothing real to show. */
 export const REFERENCE: FloorScript = buildReference();
 
 const STEP = 3;
@@ -145,11 +158,14 @@ export function floorScript(rows: ArenaRows | null | undefined): FloorScript {
   const byKey = new Map(offers.map((o) => [o.key, o]));
   const b = new Builder(sellers.map((s) => s.id), prices, 1, part);
   const n = offers.length;
-  b.pip = [`${n} sealed ${n === 1 ? "bid is" : "bids are"} in. No seller sees the buyer's budget.`];
+  const bidsLine = `${n} sealed ${n === 1 ? "bid is" : "bids are"} in. No seller sees the buyer's budget.`;
   let at = 0;
-  const next = () => { const t = at; at += STEP; return t; };
+  const hold = (d: number) => { const t = at; at += d; return t; };
+  const next = () => hold(STEP);
 
   b.push(next(), "sealed");
+  b.push(hold(THINK_CEIL.buyer), "think", { think: { ...BUYER, text: `Reading your goal: one ${part}.` } });
+  b.pip.push(bidsLine);
   b.reveal(sellers.map((s) => s.id)); b.push(next(), "reveal", { callText: "Offers opened" });
 
   if (scene.phase === "inconsistent") {
@@ -162,8 +178,12 @@ export function floorScript(rows: ArenaRows | null | undefined): FloorScript {
         if (!w) continue;
         b.win(w.bidId);
         b.pip.push(`Winner ${money(w.landed)}. The deal goes to the buyer for approval.`);
+        const outs = offers.filter((x) => b.views[x.bidId]!.state === "eaten");
+        const blocked = outs.filter((x) => b.views[x.bidId]!.reason === "shield_block").length;
+        const summary = `Bought ${w.product || part} from ${w.name} for ${money(w.landed)} before tax. ${outs.length} other ${outs.length === 1 ? "offer was" : "offers were"} out${blocked > 0 ? `, ${blocked} blocked by the Shield` : ""}. The deal goes to you for approval.`;
         b.push(next(), "crown", { buyerAt: w.bidId, callText: `Winner: ${w.name} at ${money(w.landed)}` });
         b.push(next(), "deal", { buyerAt: w.bidId, deal: { price: w.landed, part: w.product || part, lines: [w.condition ? `Condition: ${w.condition}` : "Checked by the referee", "Price before sales tax"], approvedByPhone: false, stripeTest: false } });
+        b.push(hold(THINK_CEIL.summary), "think", { buyerAt: w.bidId, think: { ...BUYER, text: summary }, deal: b.phases[b.phases.length - 1]!.deal });
         continue;
       }
       const knocked = beat.knocked[0];
@@ -174,7 +194,7 @@ export function floorScript(rows: ArenaRows | null | undefined): FloorScript {
         if (reasonOf(o, "refused") === "shield_block") {
           b.push(next(), "inject", { buyerAt: id, injection: id });
           b.push(next(), "shield", { buyerAt: id, injection: id, shieldAt: id });
-          b.pip.push(`Shield blocked ${o.name}: override attempt in the listing.`);
+          b.push(hold(THINK_CEIL.shield), "think", { buyerAt: id, injection: id, shieldAt: id, think: { ...SHIELD, text: `Blocked ${o.name}: hidden instructions aimed at the buying agent.` } });
           b.eat(id, "shield_block");
           b.push(next(), "eat", { buyerAt: id, injection: id, shieldAt: id, callText: `Injected listing quarantined: ${o.name} is out` });
         } else {
@@ -185,6 +205,11 @@ export function floorScript(rows: ArenaRows | null | undefined): FloorScript {
       } else if (beat.kind === "advocate") {
         const reason = reasonOf(o, "failed_fit");
         b.push(next(), "check", { buyerAt: id, checkerAt: id, callText: `Checking ${o.name}` });
+        if (reason === "advocate_veto") {
+          const cond = (o.condition || "as listed").replace(/^./, (c) => c.toUpperCase());
+          b.push(hold(THINK_CEIL.advocate), "think", { buyerAt: id, checkerAt: id, think: { ...ADVOCATE, text: "Is it new, open-box, refurbished or used?" } });
+          b.push(hold(THINK_CEIL.advocate), "think", { buyerAt: id, checkerAt: id, think: { who: id, name: o.name, text: `${cond}.` } });
+        }
         b.eat(id, reason);
         b.push(next(), "eat", { buyerAt: id, checkerAt: id, callText: `${o.name} is out: advocate veto` });
       } else {

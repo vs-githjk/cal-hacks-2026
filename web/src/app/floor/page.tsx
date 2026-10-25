@@ -9,6 +9,8 @@ import type { ArenaRows } from "@/lib/arenaScene";
 import { FRAME, FloorHud } from "@/components/floor/FloorHud";
 import { FloorAquariumPixel } from "@/components/floor/FloorAquariumPixel";
 import { FloorRingPixel } from "@/components/floor/FloorRingPixel";
+import { FloorCall } from "@/components/floor/FloorCall";
+import { useChatFeed } from "@/components/floor/useChatFeed";
 import { REFERENCE, floorScript, type FloorPhase, type FloorScript, type Theme } from "@/components/floor/floorPhases";
 import { useFloorClock } from "@/components/floor/useFloorClock";
 
@@ -50,13 +52,14 @@ export default function FloorPage() {
 /** `?scene=aquarium` swaps the ring for the side-view tank; the default is the ring. */
 const isAquarium = () => new URLSearchParams(window.location.search).get("scene") === "aquarium";
 
-/** The pixel ring (or tank) inside the HUD. */
-function Stage({ script, phase, theme, reducedMotion, width, frame = false }: { script: FloorScript; phase: FloorPhase; theme: Theme; reducedMotion: boolean; width: number; frame?: boolean }) {
+/** The pixel ring (or tank) inside the HUD. `follow` is the small call tile: no HUD chrome, the camera follows Pac-Man. */
+function Stage({ script, phase, theme, reducedMotion, width, frame = false, follow = false }: { script: FloorScript; phase: FloorPhase; theme: Theme; reducedMotion: boolean; width: number; frame?: boolean; follow?: boolean }) {
+  const fr = frame && !follow;
   return (
-    <FloorHud script={script} phase={phase} width={width} frame={frame} reducedMotion={reducedMotion}>
+    <FloorHud script={script} phase={phase} width={width} frame={fr} reducedMotion={reducedMotion} bare={follow}>
       {isAquarium()
-        ? <FloorAquariumPixel script={script} phase={phase} theme={theme} reducedMotion={reducedMotion} width={frame ? FRAME.stageW : width} />
-        : <FloorRingPixel script={script} phase={phase} theme={theme} reducedMotion={reducedMotion} width={frame ? FRAME.stageW : width} />}
+        ? <FloorAquariumPixel script={script} phase={phase} theme={theme} reducedMotion={reducedMotion} width={fr ? FRAME.stageW : width} follow={follow} />
+        : <FloorRingPixel script={script} phase={phase} theme={theme} reducedMotion={reducedMotion} width={fr ? FRAME.stageW : width} follow={follow} />}
     </FloorHud>
   );
 }
@@ -66,11 +69,12 @@ function ReplayView({ theme, t }: { theme: Theme; t: number }) {
   const size = useSyncExternalStore(subscribeResize, windowSize, () => "1920x1080");
   const [w, h] = size.split("x").map(Number) as [number, number];
   const k = Math.min(w / 1920, h / 1080);
-  const { phase } = useFloorClock(REFERENCE, { replay: true, reducedMotion: false, initial: t });
+  const { phase, seconds } = useFloorClock(REFERENCE, { replay: true, reducedMotion: false, initial: t });
+  const chat = useChatFeed(REFERENCE, seconds, { replay: true });
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: INK, color: TEXT, overflow: "hidden" }}>
       <div style={{ position: "absolute", left: "50%", top: "50%", width: 1920, height: 1080, transform: `translate(-50%, -50%) scale(${k})`, transformOrigin: "50% 50%" }}>
-        <Stage script={REFERENCE} phase={phase} theme={theme} reducedMotion={false} width={1920} frame />
+        <FloorCall lines={chat.lines} live={chat.live} reducedMotion={false} floor={(follow) => <Stage script={REFERENCE} phase={phase} theme={theme} reducedMotion={false} width={1920} frame follow={follow} />} />
       </div>
     </div>
   );
@@ -90,6 +94,7 @@ function FloorView({ theme: initialTheme, sample, t, paused }: { theme: Theme; s
   const reduced = !!useReducedMotion();
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const clock = useFloorClock(script, { reducedMotion: reduced, initial: t, startPaused: paused });
+  const chat = useChatFeed(script, clock.seconds, { replay: false });
 
   // The stage fills the column up to 1200 px; the width is measured so the HUD scales with it.
   const box = useRef<HTMLDivElement>(null);
@@ -111,7 +116,7 @@ function FloorView({ theme: initialTheme, sample, t, paused }: { theme: Theme; s
         </p>
       </div>
       <div ref={box} className="mx-auto w-full min-w-0 max-w-full" style={{ maxWidth: MAX_STAGE }}>
-        <Stage script={script} phase={clock.phase} theme={theme} reducedMotion={reduced} width={width} />
+        <FloorCall lines={chat.lines} live={chat.live} reducedMotion={reduced} floor={(follow) => <Stage script={script} phase={clock.phase} theme={theme} reducedMotion={reduced} width={width} follow={follow} />} />
       </div>
       <div className="flex min-w-0 max-w-full flex-wrap items-center justify-center gap-2">
         <button type="button" className={BTN} onClick={clock.playing ? clock.pause : clock.play} aria-pressed={!clock.playing}>{clock.playing ? "Pause" : "Play"}</button>

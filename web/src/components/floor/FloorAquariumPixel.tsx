@@ -7,6 +7,8 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type JSX, type 
 import type { FloorPhase, FloorScript, OutReason, SellerView } from "./floorPhases.ts";
 import type { FloorRendererProps } from "./FloorRingPixel.tsx";
 import { POCKET_IDS, findTile, heading, loopTile, mazePath, patrolLoop, pocketRect, type Tile } from "./maze.ts";
+import { followBox } from "./callState.ts";
+import { useFollowViewBox } from "./followCam.ts";
 import { AQUA, AUDIT, CHECKER, FISH, GHOST, GHOST_COLORS, GHOST_SCARED, MAZE, MAZE_ORIGIN, MAZE_TILE as T, PAC, PAC_CLOSED, PAL, PRODUCT_COLORS, PRODUCT_ICONS, PUFFER, REEF, REFEREE, REFEREE_UP, WEED_OFFSETS, fishColors, mazeWallPaths, mix, productKind, runs, sandCells, type Grid, type ProductKind } from "./pixelArt.ts";
 
 const MONO = "var(--font-geist-mono, ui-monospace, monospace)";
@@ -392,7 +394,7 @@ function place(c: Cand, e: number, phase: FloorPhase, reduced: boolean, continui
   };
 }
 
-export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width }: FloorRendererProps): JSX.Element {
+export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width, follow = false }: FloorRendererProps): JSX.Element {
   const uid = useId().replace(/:/g, "");
   const [tick, setTick] = useState(0);
   const [clock, setClock] = useState<{ p: FloorPhase | null; ms: number }>({ p: null, ms: 0 });
@@ -556,8 +558,9 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width 
 
   const sorted = [...rows].sort((a, b) => a.sy - b.sy);
 
+  const followVb = useFollowViewBox(follow ? followBox(pc.x, pc.y, 960, 540) : null, reducedMotion);
   return (
-    <svg viewBox={width < 640 ? "30 130 900 390" : "0 0 960 540"} width="100%" role="img" aria-label={summary(script, phase)} style={{ display: "block", height: "auto" }}>
+    <svg viewBox={followVb ?? (width < 640 ? "30 130 900 390" : "0 0 960 540")} width="100%" role="img" aria-label={summary(script, phase)} style={{ display: "block", height: "auto" }}>
       <style>{CSS}</style>
       <defs>
         <linearGradient id={`${uid}w`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={AQUA.top} /><stop offset="1" stopColor={AQUA.bottom} /></linearGradient>

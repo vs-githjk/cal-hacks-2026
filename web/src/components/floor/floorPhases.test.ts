@@ -13,7 +13,7 @@ const noEarlyPrice = (s: FloorScript) => {
 const endState = (s: FloorScript) => s.phases[s.phases.length - 1]!.sellers;
 
 test("REFERENCE shape", () => {
-  assert.equal(REFERENCE.duration, 24);
+  assert.equal(REFERENCE.duration, 31);
   assert.equal(REFERENCE.sim, true);
   const ats = REFERENCE.phases.map((p) => p.at);
   assert.deepEqual(ats, [...ats].sort((a, b) => a - b));
@@ -63,7 +63,9 @@ test("floorScript(SAMPLES.gpu) follows the scene", () => {
   assert.equal(s.duration, s.phases[s.phases.length - 1]!.at + 6);
   assert.equal(s.phases[0]!.at, 0);
   assert.equal(s.phases[1]!.at, 3);
-  assert.equal(s.phases[s.phases.length - 1]!.kind, "deal");
+  assert.equal(s.phases[s.phases.length - 1]!.kind, "think");
+  assert.equal(s.phases[s.phases.length - 2]!.kind, "deal");
+  assert.ok(s.phases[s.phases.length - 1]!.deal, "the deal card stays up during the summary");
 });
 
 test("floorScript(gpu-open) never shows a price", () => {
@@ -97,8 +99,8 @@ test("a closed round with no offers says no offer passed", () => {
 test("phaseAt wraps and clamps", () => {
   assert.equal(phaseAt(REFERENCE, 0), REFERENCE.phases[0]);
   assert.equal(phaseAt(REFERENCE, 4), REFERENCE.phases.find((p) => p.at === 3.6));
-  assert.equal(phaseAt(REFERENCE, 24 + 4), phaseAt(REFERENCE, 4));
-  assert.equal(phaseAt(REFERENCE, 23.99).kind, "paid");
+  assert.equal(phaseAt(REFERENCE, 31 + 4), phaseAt(REFERENCE, 4));
+  assert.equal(phaseAt(REFERENCE, 30.99).kind, "paid");
   assert.equal(phaseAt(REFERENCE, -5), REFERENCE.phases[0]);
   assert.equal(phaseAt(REFERENCE, Number.NaN), REFERENCE.phases[0]);
 });
@@ -133,4 +135,44 @@ test("highest_price is used only when the eaten offer is strictly the priciest s
       }
     }
   }
+});
+
+const holds = (s: FloorScript) => s.phases.map((p, i) => ({ p, hold: (s.phases[i + 1]?.at ?? s.duration) - p.at })).filter((x) => x.p.kind === "think");
+
+test("REFERENCE thinking beats: four beats in order, within their ceilings", () => {
+  const beats = holds(REFERENCE);
+  assert.deepEqual(beats.map((b) => [b.p.think!.who, b.p.think!.text]), [
+    ["buyer", "Reading your goal: one RTX 5070 Ti under $1,400 by Friday."],
+    ["shield", "Blocked Seller 2: hidden instructions aimed at the buying agent."],
+    ["advocate", "Is it new, open-box, refurbished or used?"],
+    ["seller_3", "Open-box."],
+    ["buyer", "Bought the ASUS Prime RTX 5070 Ti OC from Best Buy for $1,299.99 before tax. Two offers were out on price, one was blocked by the Shield, and one failed the fit check. Approved by your phone code."],
+  ]);
+  const ceil = [2.5, 1.2, 2.5, 2.5, 5];
+  beats.forEach((b, i) => assert.ok(b.hold > 0 && b.hold <= ceil[i]! + 1e-9, `beat ${i} holds ${b.hold}`));
+  const ats = REFERENCE.phases.map((p) => p.at);
+  assert.deepEqual(ats, [...ats].sort((a, b) => a - b));
+  assert.equal(new Set(ats).size, ats.length);
+  assert.ok(REFERENCE.phases[REFERENCE.phases.length - 1]!.at < REFERENCE.duration);
+  const kinds = REFERENCE.phases.map((p) => p.kind);
+  assert.ok(kinds.indexOf("think") < kinds.indexOf("reveal"));
+  assert.ok(REFERENCE.phases.filter((p) => p.think && !p.deal).every((p) => p.think!.who !== "buyer" || p.at < 3.6));
+  assert.equal(REFERENCE.phases.filter((p) => !p.think).every((p) => p.think == null), true);
+});
+
+test("real rounds get the buyer, shield, advocate and summary beats within ceilings", () => {
+  const s = floorScript(SAMPLES.gpu);
+  const beats = holds(s);
+  const who = beats.map((b) => b.p.think!.who);
+  assert.equal(who[0], "buyer");
+  assert.ok(who.includes("shield") && who.includes("advocate"));
+  assert.equal(who[who.length - 1], "buyer");
+  for (const b of beats) {
+    const ceil = b.p.think!.who === "shield" ? 1.2 : b.p === beats[beats.length - 1]!.p ? 6 : 2.5; // the summary is the last phase: 5 s beat plus the 1 s tail before the loop restarts
+    assert.ok(b.hold <= ceil + 1e-9, `${b.p.think!.who} holds ${b.hold}`);
+  }
+  noEarlyPrice(s);
+  const adv = s.phases.findIndex((p) => p.think?.who === "advocate");
+  assert.equal(s.phases[adv + 1]!.kind, "think");
+  assert.equal(s.phases[adv + 2]!.kind, "eat");
 });

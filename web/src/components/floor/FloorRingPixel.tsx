@@ -4,9 +4,11 @@
 // The phase is the source of truth; CSS transitions move the <g> groups, one 50 ms timer drives the short timed beats.
 import { useEffect, useState, type CSSProperties, type JSX, type ReactNode } from "react";
 import type { FloorPhase, FloorScript, OutReason, SellerView, Theme } from "./floorPhases.ts";
+import { followBox } from "./callState.ts";
+import { useFollowViewBox } from "./followCam.ts";
 import { AUDIT, CELL, FISH, fishColors, GHOST, GHOST_COLORS, GHOST_SCARED, PAC, PAC_CLOSED, PAL, SHIELD, runs, type Grid } from "./pixelArt.ts";
 
-export interface FloorRendererProps { script: FloorScript; phase: FloorPhase; theme: Theme; reducedMotion: boolean; width: number }
+export interface FloorRendererProps { script: FloorScript; phase: FloorPhase; theme: Theme; reducedMotion: boolean; width: number; follow?: boolean }
 
 const MONO = "var(--font-geist-mono, ui-monospace, monospace)";
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -131,7 +133,7 @@ function summary(script: FloorScript, phase: FloorPhase): string {
   return `Round ${phase.round} of ${phase.rounds}, ${phase.part}: ${tail}`;
 }
 
-export function FloorRingPixel({ script, phase, theme, reducedMotion, width }: FloorRendererProps): JSX.Element {
+export function FloorRingPixel({ script, phase, theme, reducedMotion, width, follow = false }: FloorRendererProps): JSX.Element {
   const [clock, setClock] = useState<{ p: FloorPhase | null; ms: number }>({ p: null, ms: 0 });
   const runs3 = phase.kind === "shield" || phase.kind === "check" || phase.kind === "eat";
   useEffect(() => {
@@ -264,8 +266,9 @@ export function FloorRingPixel({ script, phase, theme, reducedMotion, width }: F
   });
   items.sort((a, b) => a.y - b.y);
 
+  const followVb = useFollowViewBox(follow ? followBox(pac.x + PW / 2, pac.y + PW / 2 - 40, 960, 540) : null, reducedMotion);
   return (
-    <svg viewBox={width < 640 ? "60 80 840 380" : "0 0 960 540"} width="100%" role="img" aria-label={summary(script, phase)} style={{ display: "block", height: "auto" }}>
+    <svg viewBox={followVb ?? (width < 640 ? "60 80 840 380" : "0 0 960 540")} width="100%" role="img" aria-label={summary(script, phase)} style={{ display: "block", height: "auto" }}>
       <style>{CSS}</style>
       <rect width={960} height={540} rx={18} fill={PAL.ink} />
       <g aria-hidden="true" transform="translate(0 -40)">
